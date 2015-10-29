@@ -1,2 +1,2 @@
 language: java
-script: ./gradlew bootRepackage
+script: gradle bootRepackage
