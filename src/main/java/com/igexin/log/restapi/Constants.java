@@ -43,7 +43,7 @@ public class Constants {
     public static final String DEFAULT_FIELD_SEPARATOR = ":";
 
     /**
-     * 加解密失败返回字符串.
+     * 加解密失败返回字符串.test
      */
     public static final String CRYPTO_ERROR = "CRYPTO_ERROR";
 
