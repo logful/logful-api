@@ -19,8 +19,8 @@ import java.net.InetSocketAddress;
 
 @SpringBootApplication
 @EnableScheduling
-@EnableConfigurationProperties(RestApiProperties.class)
-public class RestApiApplication implements AsyncConfigurer {
+@EnableConfigurationProperties(LogfulProperties.class)
+public class LogfulApplication implements AsyncConfigurer {
 
     public static GelfTransport transport;
 
@@ -35,7 +35,7 @@ public class RestApiApplication implements AsyncConfigurer {
                 .tcpNoDelay(true)
                 .sendBufferSize(1048576);
         transport = GelfTransports.create(config);
-        SpringApplication.run(RestApiApplication.class, args);
+        SpringApplication.run(LogfulApplication.class, args);
     }
 
     @Override

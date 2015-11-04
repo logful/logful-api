@@ -2,7 +2,7 @@ package com.igexin.log.restapi.parse;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.RestApiApplication;
+import com.igexin.log.restapi.LogfulApplication;
 import com.igexin.log.restapi.entity.Layout;
 import com.igexin.log.restapi.entity.LayoutItem;
 import com.igexin.log.restapi.entity.LogLine;
@@ -131,7 +131,7 @@ public class GrayLogSender implements SenderInterface {
                 // 如果解析没有错误则发送日志
                 message.setLogLine(logLine);
                 try {
-                    RestApiApplication.transport.send(message);
+                    LogfulApplication.transport.send(message);
                 } catch (InterruptedException e) {
                     logLine.setStatus(LogLine.STATE_FAILED);
                     GlobalReference.saveLogLine(logLine);

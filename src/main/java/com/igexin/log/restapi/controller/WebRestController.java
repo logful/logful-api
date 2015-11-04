@@ -2,7 +2,7 @@ package com.igexin.log.restapi.controller;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.RestApiProperties;
+import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
 import com.igexin.log.restapi.entity.DecryptError;
@@ -41,7 +41,7 @@ import java.util.List;
 public class WebRestController {
 
     @Autowired
-    private RestApiProperties restApiProperties;
+    private LogfulProperties logfulProperties;
 
     @Autowired
     private MongoUserInfoRepository mongoUserInfoRepository;
@@ -119,7 +119,7 @@ public class WebRestController {
     @ResponseBody
     public String decryptLogFile(@RequestParam("appId") final String appId,
                                  @RequestParam("logFile") MultipartFile logFile) {
-        String cacheDirPath = restApiProperties.cacheDir();
+        String cacheDirPath = logfulProperties.cacheDir();
         File cacheDir = new File(cacheDirPath);
         if (!cacheDir.exists()) {
             boolean successful = cacheDir.mkdirs();
@@ -192,7 +192,7 @@ public class WebRestController {
             throw new ServerException();
         }
 
-        String filePath = restApiProperties.cacheDir() + "/" + filename;
+        String filePath = logfulProperties.cacheDir() + "/" + filename;
         File logFile = new File(filePath);
         if (logFile.exists() && logFile.isFile()) {
             HttpHeaders headers = new HttpHeaders();
@@ -247,7 +247,7 @@ public class WebRestController {
             return jsonArray.toString();
         }
 
-        String logDirPath = restApiProperties.decryptedDir(platform) + "/" + appId + "/" + uid;
+        String logDirPath = logfulProperties.decryptedDir(platform) + "/" + appId + "/" + uid;
         File logDir = new File(logDirPath);
         if (!logDir.exists() || !logDir.isDirectory()) {
             return jsonArray.toString();
@@ -333,7 +333,7 @@ public class WebRestController {
             filename = filename + ".bin";
         }
 
-        String filePath = restApiProperties.decryptedDir(platform) + "/" + appId + "/" + uid + "/" + filename;
+        String filePath = logfulProperties.decryptedDir(platform) + "/" + appId + "/" + uid + "/" + filename;
         File logFile = new File(filePath);
         if (logFile.exists() && logFile.isFile()) {
             HttpHeaders headers = new HttpHeaders();
@@ -464,7 +464,7 @@ public class WebRestController {
     @ResponseBody
     public String clearCache() {
         boolean successful = true;
-        String cacheDirPath = restApiProperties.cacheDir();
+        String cacheDirPath = logfulProperties.cacheDir();
         File cacheDir = new File(cacheDirPath);
         if (cacheDir.exists() && cacheDir.isDirectory()) {
             File[] files = cacheDir.listFiles();
@@ -574,7 +574,7 @@ public class WebRestController {
             throw new BadRequestException();
         }
         String filename = uri + ".jpg";
-        File file = new File(restApiProperties.attachmentDir() + "/" + filename);
+        File file = new File(logfulProperties.attachmentDir() + "/" + filename);
         if (file.exists() || file.isFile()) {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_JPEG);

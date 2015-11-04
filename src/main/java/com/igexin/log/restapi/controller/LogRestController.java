@@ -1,7 +1,7 @@
 package com.igexin.log.restapi.controller;
 
 import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.RestApiProperties;
+import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
 import com.igexin.log.restapi.entity.LogFileProperties;
@@ -31,7 +31,7 @@ import java.util.List;
 public class LogRestController {
 
     @Autowired
-    private RestApiProperties restApiProperties;
+    private LogfulProperties logfulProperties;
 
     @Autowired
     private MongoLogLineRepository mongoDbLogLineRepository;
@@ -364,12 +364,12 @@ public class LogRestController {
                                    String alias,
                                    String fileSum,
                                    MultipartFile logFile) {
-        GlobalReference.saveProperties(restApiProperties);
+        GlobalReference.saveProperties(logfulProperties);
         GlobalReference.saveLogLineRepository(mongoDbLogLineRepository);
         GlobalReference.saveDecryptErrorRepository(mongoDecryptErrorRepository);
         GlobalReference.listen();
 
-        String tempDirPath = restApiProperties.tempDir();
+        String tempDirPath = logfulProperties.tempDir();
         File tempDir = new File(tempDirPath);
         if (!tempDir.exists()) {
             if (tempDir.mkdirs()) {
@@ -415,7 +415,7 @@ public class LogRestController {
                                        String appId,
                                        String fileSum,
                                        MultipartFile reportFile) {
-        String reportDirPath = restApiProperties.crashReportDir(platform) + "/" + appId + "/" + uid;
+        String reportDirPath = logfulProperties.crashReportDir(platform) + "/" + appId + "/" + uid;
         File reportDir = new File(reportDirPath);
         if (!reportDir.exists()) {
             if (!reportDir.mkdirs()) {
@@ -449,13 +449,13 @@ public class LogRestController {
                                       MultipartFile attachmentFile) {
         String filename = StringUtil.attachmentName(platform, uid, appId, attachmentId);
         if (filename.length() > 0) {
-            File dir = new File(restApiProperties.attachmentDir());
+            File dir = new File(logfulProperties.attachmentDir());
             if (!dir.exists()) {
                 if (!dir.mkdirs()) {
                     throw new ServerException();
                 }
             }
-            String filePath = restApiProperties.attachmentDir() + "/" + filename + ".jpg";
+            String filePath = logfulProperties.attachmentDir() + "/" + filename + ".jpg";
             File file = new File(filePath);
 
             try {

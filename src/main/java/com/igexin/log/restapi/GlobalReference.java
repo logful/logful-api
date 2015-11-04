@@ -14,7 +14,7 @@ public class GlobalReference implements GelfTransportListener {
     private static final int MAX_CAPACITY = 1000;
     private MongoLogLineRepository logLineRepository;
     private MongoDecryptErrorRepository decryptErrorRepository;
-    private RestApiProperties properties;
+    private LogfulProperties properties;
     private boolean connected = false;
     private HashMap<String, Layout> layoutMap = new HashMap<>();
 
@@ -57,7 +57,7 @@ public class GlobalReference implements GelfTransportListener {
 
     public static void listen() {
         GlobalReference reference = reference();
-        RestApiApplication.transport.setListener(reference);
+        LogfulApplication.transport.setListener(reference);
     }
 
     public static boolean isConnected() {
@@ -82,7 +82,7 @@ public class GlobalReference implements GelfTransportListener {
         return reference.decryptErrorRepository;
     }
 
-    public static RestApiProperties properties() {
+    public static LogfulProperties properties() {
         GlobalReference reference = reference();
         return reference.properties;
     }
@@ -97,7 +97,7 @@ public class GlobalReference implements GelfTransportListener {
         reference.decryptErrorRepository = decryptErrorRepository;
     }
 
-    public static void saveProperties(RestApiProperties properties) {
+    public static void saveProperties(LogfulProperties properties) {
         GlobalReference reference = reference();
         reference.properties = properties;
     }

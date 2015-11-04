@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConfigurationProperties(prefix = "logful")
-public class RestApiProperties {
+public class LogfulProperties {
 
     private String path;
 

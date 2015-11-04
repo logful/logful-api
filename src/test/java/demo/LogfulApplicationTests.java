@@ -1,6 +1,6 @@
 package demo;
 
-import com.igexin.log.restapi.RestApiApplication;
+import com.igexin.log.restapi.LogfulApplication;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -8,12 +8,12 @@ import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = RestApiApplication.class)
+@SpringApplicationConfiguration(classes = LogfulApplication.class)
 @WebAppConfiguration
-public class RestApiApplicationTests {
+public class LogfulApplicationTests {
 
-	@Test
-	public void contextLoads() {
-	}
+    @Test
+    public void contextLoads() {
+    }
 
 }

@@ -3,22 +3,22 @@ package com.igexin.log.restapi;
 public class Constants {
 
     /**
-     * 缓存目录
+     * 缓存目录.
      */
     public static final String CACHE_DIR = "cache";
 
     /**
-     * 解析出错的日志文件目录
+     * 解析出错的日志文件目录.
      */
     public static final String ERROR_DIR = "error";
 
     /**
-     * 已解密的日志文件目录
+     * 已解密的日志文件目录.
      */
     public static final String DECRYPTED_DIR = "decrypted";
 
     /**
-     * 应用崩溃文件目录
+     * 应用崩溃文件目录.
      */
     public static final String CRASH_REPORT_DIR = "crash";
 

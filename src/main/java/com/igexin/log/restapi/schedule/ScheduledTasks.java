@@ -1,7 +1,7 @@
 package com.igexin.log.restapi.schedule;
 
 import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.RestApiProperties;
+import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.LogFile;
 import com.igexin.log.restapi.entity.LogLine;
 import com.igexin.log.restapi.entity.MergeMeta;
@@ -31,7 +31,7 @@ public class ScheduledTasks {
     private static final long DELETE_BEFORE_DAY = 7;
 
     @Autowired
-    private RestApiProperties restApiProperties;
+    private LogfulProperties logfulProperties;
 
     @Autowired
     private MongoLogLineRepository mongoDbLogLineRepository;
@@ -77,8 +77,8 @@ public class ScheduledTasks {
     //@Scheduled(cron = "0 0 */1 * * *") // 每一小时执行一次
     //@Scheduled(cron = "*/10 * * * * *")
     public void clearAndMergeFile() {
-        String androidDirPath = restApiProperties.decryptedDir("android");
-        String iosDirPath = restApiProperties.decryptedDir("ios");
+        String androidDirPath = logfulProperties.decryptedDir("android");
+        String iosDirPath = logfulProperties.decryptedDir("ios");
 
         recursionDir(androidDirPath);
         recursionDir(iosDirPath);
@@ -111,7 +111,7 @@ public class ScheduledTasks {
      * Clear expired attachment file.
      */
     private void clearAttachmentDir() {
-        String dirPath = restApiProperties.attachmentDir();
+        String dirPath = logfulProperties.attachmentDir();
         File dir = new File(dirPath);
         List<String> deletePaths = new ArrayList<>();
         if (dir.exists() && dir.isDirectory()) {
