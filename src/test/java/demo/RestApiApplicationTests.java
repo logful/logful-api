@@ -14,9 +14,6 @@ public class RestApiApplicationTests {
 
 	@Test
 	public void contextLoads() {
-		// do some tests.
-		// test2
-		// another
 	}
 
 }

@@ -1,5 +1,7 @@
 package com.igexin.log.restapi;
 
+import com.igexin.log.restapi.util.ExpandNativeLibUtil;
+import com.igexin.log.restapi.util.PropertiesUtil;
 import org.graylog2.gelfclient.GelfConfiguration;
 import org.graylog2.gelfclient.GelfTransports;
 import org.graylog2.gelfclient.transport.GelfTransport;
@@ -20,17 +22,19 @@ import java.net.InetSocketAddress;
 @EnableConfigurationProperties(RestApiProperties.class)
 public class RestApiApplication implements AsyncConfigurer {
 
-    private static InetSocketAddress socketAddress = new InetSocketAddress(Constants.GRAY_LOG_ADDRESS, Constants.GRAY_LOG_PORT);
-    private static GelfConfiguration config = new GelfConfiguration(socketAddress)
-            .transport(GelfTransports.TCP)
-            .queueSize(512)
-            .connectTimeout(5000)
-            .reconnectDelay(10000)
-            .tcpNoDelay(true)
-            .sendBufferSize(32768);
-    public static GelfTransport transport = GelfTransports.create(config);
+    public static GelfTransport transport;
 
     public static void main(String[] args) {
+        ExpandNativeLibUtil.util().expand();
+        InetSocketAddress socketAddress = new InetSocketAddress(PropertiesUtil.graylogHost(), PropertiesUtil.graylogPort());
+        GelfConfiguration config = new GelfConfiguration(socketAddress)
+                .transport(GelfTransports.TCP)
+                .queueSize(512)
+                .connectTimeout(5000)
+                .reconnectDelay(10000)
+                .tcpNoDelay(true)
+                .sendBufferSize(1048576);
+        transport = GelfTransports.create(config);
         SpringApplication.run(RestApiApplication.class, args);
     }
 
@@ -38,7 +42,7 @@ public class RestApiApplication implements AsyncConfigurer {
     @Bean
     public ThreadPoolTaskExecutor getAsyncExecutor() {
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-        taskExecutor.setMaxPoolSize(100);
+        taskExecutor.setMaxPoolSize(32);
         taskExecutor.setQueueCapacity(Constants.QUEUE_CAPACITY);
         taskExecutor.setThreadNamePrefix("logfile-process-");
         taskExecutor.initialize();

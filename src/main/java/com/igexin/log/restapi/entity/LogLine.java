@@ -1,7 +1,9 @@
 package com.igexin.log.restapi.entity;
 
+import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.data.annotation.Id;
 
 public class LogLine {
@@ -187,10 +189,24 @@ public class LogLine {
 
     @Override
     public String toString() {
+        String temp;
         if (StringUtil.isEmpty(attachment)) {
-            return String.format("%s||%s||%s", DateTimeUtil.timeString(timestamp), tag, message);
+            temp = String.format("%s%s%s%s%s",
+                    DateTimeUtil.timeString(timestamp),
+                    Constants.LOG_LINE_SEPARATOR,
+                    tag,
+                    Constants.LOG_LINE_SEPARATOR,
+                    message);
         } else {
-            return String.format("%s||%s||%s||%s", DateTimeUtil.timeString(timestamp), tag, message, attachment);
+            temp = String.format("%s%s%s%s%s%s%s",
+                    DateTimeUtil.timeString(timestamp),
+                    Constants.LOG_LINE_SEPARATOR,
+                    tag,
+                    Constants.LOG_LINE_SEPARATOR,
+                    message,
+                    Constants.LOG_LINE_SEPARATOR,
+                    attachment);
         }
+        return temp.replaceAll(System.getProperty("line.separator"), Constants.NEW_LINE_CHARACTER);
     }
 }
