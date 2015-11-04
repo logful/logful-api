@@ -1,7 +1,5 @@
 package com.igexin.log.restapi.util;
 
-import com.igexin.log.restapi.Constants;
-
 public class CryptoTool {
 
     public static synchronized String AESEncrypt(String appId, String string) {
@@ -13,7 +11,7 @@ public class CryptoTool {
     }
 
     static {
-        System.load(Constants.JNI_LIBRARY_PATH);
+        System.loadLibrary("logful");
     }
 
     public static native String encrypt(String appId, String msg);

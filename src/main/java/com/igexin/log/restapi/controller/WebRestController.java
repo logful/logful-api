@@ -4,9 +4,11 @@ import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.GlobalReference;
 import com.igexin.log.restapi.RestApiProperties;
 import com.igexin.log.restapi.entity.Config;
+import com.igexin.log.restapi.entity.ControlProfile;
 import com.igexin.log.restapi.entity.DecryptError;
 import com.igexin.log.restapi.entity.UserInfo;
 import com.igexin.log.restapi.mongod.MongoConfigRepository;
+import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
 import com.igexin.log.restapi.mongod.MongoDecryptErrorRepository;
 import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
 import com.igexin.log.restapi.parse.LocalFileSender;
@@ -49,6 +51,9 @@ public class WebRestController {
 
     @Autowired
     private MongoConfigRepository mongoConfigRepository;
+
+    @Autowired
+    private MongoControlProfileRepository mongoControlProfileRepository;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -142,8 +147,13 @@ public class WebRestController {
                 String tag = CryptoTool.decrypt(appId, encryptedTag);
                 String msg = CryptoTool.decrypt(appId, encryptedMsg);
 
-                String line = String.format("%s|%s|%s", DateTimeUtil.timeString(timestamp), tag, msg);
-                fileSender.write(line);
+                String line = String.format("%s%s%s%s%s",
+                        DateTimeUtil.timeString(timestamp),
+                        Constants.LOG_LINE_SEPARATOR,
+                        tag,
+                        Constants.LOG_LINE_SEPARATOR,
+                        msg);
+                fileSender.write(line.replaceAll(System.getProperty("line.separator"), Constants.NEW_LINE_CHARACTER));
             }
 
             @Override
@@ -583,6 +593,33 @@ public class WebRestController {
         }
     }
 
+    @RequestMapping(value = "/web/control",
+            method = RequestMethod.POST)
+    @ResponseBody
+    public ControlProfile saveControlProfile(@RequestBody ControlProfile profile) {
+        boolean successful = mongoControlProfileRepository.save(profile);
+        if (successful) {
+            return profile;
+        } else {
+            throw new BadRequestException("Target user repeat!");
+        }
+    }
+
+    @RequestMapping(value = "/web/control",
+            method = RequestMethod.GET)
+    public ResponseEntity<List<ControlProfile>> listControlProfile() {
+        List<ControlProfile> profiles = mongoControlProfileRepository.findAll();
+        return new ResponseEntity<>(profiles, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/web/control/{id}",
+            method = RequestMethod.DELETE)
+    public void deleteControlProfile(@PathVariable String id) {
+        if (!mongoControlProfileRepository.delete(id)) {
+            throw new ServerException();
+        }
+    }
+
     private Criteria addCriteria(Criteria criteria, String key, String value) {
         if (!ControllerUtil.isEmpty(value)) {
             criteria.and(key).is(value);
@@ -592,7 +629,13 @@ public class WebRestController {
 
     @ResponseStatus(value = HttpStatus.BAD_REQUEST)
     public class BadRequestException extends RuntimeException {
-        //
+        public BadRequestException() {
+            super();
+        }
+
+        public BadRequestException(String message) {
+            super(message);
+        }
     }
 
     @ResponseStatus(value = HttpStatus.NOT_FOUND)

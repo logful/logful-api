@@ -32,15 +32,13 @@ public class Constants {
      */
     public static final String ATTACHMENT_DIR = "attachment";
 
-    public static final String JNI_LIBRARY_PATH = "/Users/keith/Tools/liblogful.dylib";
-
-    public static final String GRAY_LOG_ADDRESS = "127.0.0.1";
-
-    public static final int GRAY_LOG_PORT = 12201;
-
     public static final String DEFAULT_ATTRIBUTE_SEPARATOR = ",";
 
     public static final String DEFAULT_FIELD_SEPARATOR = ":";
+
+    public static final String LOG_LINE_SEPARATOR = "\u1699\u168f\u16e5";
+
+    public static final String NEW_LINE_CHARACTER = "\u203c\u204b\u25a9";
 
     /**
      * 加解密失败返回字符串.
@@ -49,7 +47,7 @@ public class Constants {
 
     public static final int DEFAULT_GRAY_LEVEL = 100;
 
-    public static final int QUEUE_CAPACITY = 2000;
+    public static final int QUEUE_CAPACITY = 512;
 
     public static final String CLIENT_ID = "525b8747323d49078a96e49f0189de98";
 

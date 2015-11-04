@@ -3,17 +3,16 @@ package com.igexin.log.restapi.controller;
 import com.igexin.log.restapi.GlobalReference;
 import com.igexin.log.restapi.RestApiProperties;
 import com.igexin.log.restapi.entity.Config;
+import com.igexin.log.restapi.entity.ControlProfile;
 import com.igexin.log.restapi.entity.LogFileProperties;
 import com.igexin.log.restapi.entity.UserInfo;
-import com.igexin.log.restapi.mongod.MongoConfigRepository;
-import com.igexin.log.restapi.mongod.MongoDecryptErrorRepository;
-import com.igexin.log.restapi.mongod.MongoLogLineRepository;
-import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
+import com.igexin.log.restapi.mongod.*;
 import com.igexin.log.restapi.parse.LogFileParseTask;
 import com.igexin.log.restapi.util.Checksum;
 import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import com.igexin.log.restapi.util.VersionUtil;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +23,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @RestController
 public class LogRestController {
@@ -44,7 +46,40 @@ public class LogRestController {
     private MongoConfigRepository mongoConfigRepository;
 
     @Autowired
+    private MongoControlProfileRepository mongoControlProfileRepository;
+
+    @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+
+    /**
+     * Upload system info.
+     *
+     * @param webRequest WebRequest
+     * @return Config response
+     */
+    @RequestMapping(value = "/log/info/upload",
+            method = RequestMethod.POST,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.OK)
+    public String uploadSystemInfo(final WebRequest webRequest) {
+        String platform = webRequest.getParameter("platform");
+        if (!ControllerUtil.checkPlatform(platform)) {
+            throw new BadRequestException();
+        }
+
+        String sdkVersion = webRequest.getParameter("sdkVersion");
+        if (StringUtil.isEmpty(sdkVersion)) {
+            throw new BadRequestException("No version specify!");
+        }
+
+        switch (VersionUtil.version(sdkVersion)) {
+            case V1:
+                return v1UploadSystemInfo(webRequest);
+            default:
+                throw new BadRequestException("Unknown version!");
+        }
+    }
 
     /**
      * Upload log file.
@@ -84,36 +119,6 @@ public class LogRestController {
         switch (VersionUtil.version(sdkVersion)) {
             case V1:
                 return v1UploadLogFile(platform, uid, appId, loggerName, layouts, level, alias, fileSum, logFile);
-            default:
-                throw new BadRequestException("Unknown version!");
-        }
-    }
-
-    /**
-     * Upload system info.
-     *
-     * @param webRequest WebRequest
-     * @return Config response
-     */
-    @RequestMapping(value = "/log/info/upload",
-            method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    public String uploadSystemInfo(final WebRequest webRequest) {
-        String platform = webRequest.getParameter("platform");
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
-        String sdkVersion = webRequest.getParameter("sdkVersion");
-        if (StringUtil.isEmpty(sdkVersion)) {
-            throw new BadRequestException("No version specify!");
-        }
-
-        switch (VersionUtil.version(sdkVersion)) {
-            case V1:
-                return v1UploadSystemInfo(webRequest);
             default:
                 throw new BadRequestException("Unknown version!");
         }
@@ -194,6 +199,30 @@ public class LogRestController {
     // --------------------------------------------- Old api ------------------------------------------------------ //
 
     /**
+     * Upload system info file
+     *
+     * @param platform Platform
+     * @param uid      User unique id
+     * @param appId    Application id
+     * @param fileSum  File MD5 sum
+     * @param infoFile System info file
+     * @return Response result
+     */
+    @RequestMapping(value = "/log/uploadSystemInfo",
+            method = RequestMethod.POST,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public String oldUploadSystemInfo(@RequestParam("platform") String platform,
+                                      @RequestParam("uid") String uid,
+                                      @RequestParam("appId") String appId,
+                                      @RequestParam("fileSum") String fileSum,
+                                      @RequestParam("infoFile") MultipartFile infoFile) {
+        return "{}";
+    }
+
+    /**
      * Upload log file
      *
      * @param platform   Platform
@@ -230,30 +259,6 @@ public class LogRestController {
     }
 
     /**
-     * Upload system info file
-     *
-     * @param platform Platform
-     * @param uid      User unique id
-     * @param appId    Application id
-     * @param fileSum  File MD5 sum
-     * @param infoFile System info file
-     * @return Response result
-     */
-    @RequestMapping(value = "/log/uploadSystemInfo",
-            method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    @ResponseBody
-    public String oldUploadSystemInfo(@RequestParam("platform") String platform,
-                                      @RequestParam("uid") String uid,
-                                      @RequestParam("appId") String appId,
-                                      @RequestParam("fileSum") String fileSum,
-                                      @RequestParam("infoFile") MultipartFile infoFile) {
-        return "{}";
-    }
-
-    /**
      * Upload crash report file
      *
      * @param platform   Platform
@@ -282,6 +287,73 @@ public class LogRestController {
     }
 
     // ---------------------------------- Detail rest controller version function api ------------------------------ //
+
+    private String v1UploadSystemInfo(final WebRequest webRequest) {
+        // Save user info to db.
+        UserInfo info = UserInfo.create(webRequest);
+        UserInfo temp = mongoUserInfoRepository.findByUidAndAppId(info.getPlatform(), info.getUid(), info.getAppId());
+        if (temp != null) {
+            if (temp.hashCode() != info.hashCode()) {
+                info.setId(temp.getId());
+                mongoUserInfoRepository.save(info);
+            }
+        } else {
+            mongoUserInfoRepository.save(info);
+        }
+
+        Config config = mongoConfigRepository.read();
+
+        boolean shouldUpload = false;
+        List<ControlProfile> profileList = mongoControlProfileRepository.findAllByUser(info);
+        List<Long> scheduleTime = new ArrayList<>();
+        List<String> scheduleDate = new ArrayList<>();
+        for (ControlProfile profile : profileList) {
+            if (profile.getShouldUpload()) {
+                shouldUpload = true;
+                Integer scheduleType = profile.getScheduleType();
+                if (scheduleType == 1) {
+                    scheduleDate.addAll(profile.scheduleDate());
+                } else if (scheduleType == 2) {
+                    scheduleTime.add(profile.getScheduleTime());
+                }
+            } else {
+                break;
+            }
+        }
+
+        JSONObject object = new JSONObject();
+        object.put("level", info.getLevel());
+        object.put("targetLevel", config.getLevel());
+        if (shouldUpload) {
+            if (scheduleTime.size() > 0) {
+                Collections.sort(scheduleTime);
+                JSONObject temp1 = new JSONObject();
+                temp1.put("scheduleType", 2);
+                temp1.put("scheduleTime", scheduleTime.get(scheduleTime.size() - 1));
+                object.put("shouldUpload", true);
+                object.put("schedule", temp1);
+            } else {
+                if (scheduleDate.size() > 0) {
+                    JSONArray scheduleArray = new JSONArray();
+                    for (String timeString : scheduleDate) {
+                        JSONObject dateObject = new JSONObject();
+                        dateObject.put("timeString", timeString);
+                        scheduleArray.put(dateObject);
+                    }
+                    JSONObject temp2 = new JSONObject();
+                    temp2.put("scheduleType", 1);
+                    temp2.put("scheduleArray", scheduleArray);
+                    object.put("shouldUpload", true);
+                    object.put("schedule", temp2);
+                } else {
+                    object.put("shouldUpload", false);
+                }
+            }
+        } else {
+            object.put("shouldUpload", false);
+        }
+        return object.toString();
+    }
 
     private String v1UploadLogFile(String platform,
                                    String uid,
@@ -336,29 +408,6 @@ public class LogRestController {
         threadPoolTaskExecutor.submit(task);
 
         return responseJson(0, "");
-    }
-
-    private String v1UploadSystemInfo(final WebRequest webRequest) {
-        // Save user info to db.
-        UserInfo info = UserInfo.create(webRequest);
-        UserInfo temp = mongoUserInfoRepository.findByUidAndAppId(info.getPlatform(), info.getUid(), info.getAppId());
-        if (temp != null) {
-            if (temp.hashCode() != info.hashCode()) {
-                info.setId(temp.getId());
-                mongoUserInfoRepository.save(info);
-            }
-        } else {
-            mongoUserInfoRepository.save(info);
-        }
-
-        Config config = mongoConfigRepository.read();
-
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("result", "ok");
-        jsonObject.put("upload", info.getLevel() <= config.getLevel());
-        jsonObject.put("description", "");
-
-        return jsonObject.toString();
     }
 
     private String v1UploadCrashReport(String platform,
