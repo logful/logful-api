@@ -1,11 +1,3 @@
-# logful-api
-
-[![Build Status](https://travis-ci.org/logful/logful-api.svg?branch=master)](https://travis-ci.org/logful/logful-api)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/logful/logful-api/blob/master/LICENSE)
-
-logful server api to handle log data, leveraging graylog as backend engine, written in Java.
-
-## License
 The MIT License (MIT)
 
 Copyright (c) 2015 Zhejiang Meiri Hudong Network Technology Co. Ltd.
