@@ -1,5 +1,7 @@
-package com.igexin.log.restapi.entity;
+package com.igexin.log.restapi.parse;
 
+import com.igexin.log.restapi.Constants;
+import com.igexin.log.restapi.util.StringUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -122,4 +124,19 @@ public class LogFileProperties {
         this.originalFilename = originalFilename;
     }
 
+    public String tempPath() {
+        return workPath + "/" + Constants.LOG_FILE_TEMP_DIR;
+    }
+
+    public String weedPath() {
+        return workPath + "/" + Constants.WEED_TEMP_DIR;
+    }
+
+    public String errorPath() {
+        return workPath + "/" + Constants.ERROR_DIR + "/" + platform.toLowerCase();
+    }
+
+    public String outputFilename() {
+        return StringUtil.logFileName(getPlatform(), getUid(), getAppId(), getOriginalFilename());
+    }
 }

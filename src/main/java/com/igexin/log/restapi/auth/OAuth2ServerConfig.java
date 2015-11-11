@@ -27,7 +27,10 @@ public class OAuth2ServerConfig {
         @Override
         public void configure(HttpSecurity http) throws Exception {
             http.authorizeRequests()
-                    .antMatchers("/log/**").authenticated();
+                    .antMatchers("/log/info/**").authenticated()
+                    .antMatchers("/log/file/**").authenticated()
+                    .antMatchers("/log/crash/**").authenticated()
+                    .antMatchers("/log/attachment/**").authenticated();
         }
 
     }

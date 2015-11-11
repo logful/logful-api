@@ -1,16 +1,14 @@
 package com.igexin.log.restapi.controller;
 
 import com.igexin.log.restapi.Constants;
-import com.igexin.log.restapi.GlobalReference;
 import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
-import com.igexin.log.restapi.entity.DecryptError;
 import com.igexin.log.restapi.entity.UserInfo;
 import com.igexin.log.restapi.mongod.MongoConfigRepository;
 import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
-import com.igexin.log.restapi.mongod.MongoDecryptErrorRepository;
 import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
+import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LocalFileSender;
 import com.igexin.log.restapi.parse.LogFileParser;
 import com.igexin.log.restapi.util.ControllerUtil;
@@ -47,13 +45,13 @@ public class WebRestController {
     private MongoUserInfoRepository mongoUserInfoRepository;
 
     @Autowired
-    private MongoDecryptErrorRepository mongoDecryptErrorRepository;
-
-    @Autowired
     private MongoConfigRepository mongoConfigRepository;
 
     @Autowired
     private MongoControlProfileRepository mongoControlProfileRepository;
+
+    @Autowired
+    GraylogClientService graylogClientService;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -73,7 +71,7 @@ public class WebRestController {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("status", 0);
         jsonObject.put("version", "1.0.0");
-        jsonObject.put("graylog_connected", GlobalReference.isConnected());
+        jsonObject.put("graylog_connected", graylogClientService.isConnected());
         return jsonObject.toString();
     }
 
@@ -161,7 +159,7 @@ public class WebRestController {
                 if (!successful) {
                     throw new ServerException();
                 }
-                fileSender.close();
+                fileSender.release();
             }
         });
         parser.parse(file.getAbsolutePath());
@@ -418,7 +416,7 @@ public class WebRestController {
             throw new BadRequestException();
         }
 
-        Criteria criteria = Criteria.where("platform").is(UserInfo.platformNumber(platform));
+        Criteria criteria = Criteria.where("platform").is(StringUtil.platformNumber(platform));
         criteria.and("uid").is(uid);
 
         List<UserInfo> userInfoList = mongoUserInfoRepository.findAllByCriteria(criteria);
@@ -426,7 +424,7 @@ public class WebRestController {
             UserInfo first = userInfoList.get(0);
 
             JSONObject jsonObject = new JSONObject();
-            jsonObject.put("platform", UserInfo.platformString(first.getPlatform()));
+            jsonObject.put("platform", StringUtil.platformString(first.getPlatform()));
             jsonObject.put("uid", first.getUid());
             jsonObject.put("alias", first.getAlias());
             jsonObject.put("model", first.getModel());
@@ -481,33 +479,6 @@ public class WebRestController {
         jsonObject.put("result", successful);
 
         return jsonObject.toString();
-    }
-
-    /**
-     * Fetch decrypt error list.
-     *
-     * @return Decrypt error list
-     */
-    @RequestMapping(value = "/web/errors",
-            method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    @ResponseBody
-    public String fetchDecryptErrorList() {
-        List<DecryptError> errorList = mongoDecryptErrorRepository.findAll();
-
-        JSONArray jsonArray = new JSONArray();
-
-        for (DecryptError error : errorList) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("uid", error.getUid());
-            jsonObject.put("timestamp", error.getTimestamp());
-
-            jsonArray.put(jsonObject);
-        }
-
-        return jsonArray.toString();
     }
 
     /**

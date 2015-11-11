@@ -88,4 +88,5 @@ public class GelfUdpTransport extends AbstractGelfTransport {
 
         bootstrap.bind(0);
     }
+
 }

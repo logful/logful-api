@@ -1,41 +1,44 @@
 package com.igexin.log.restapi.parse;
 
 import com.igexin.log.restapi.Constants;
-import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.entity.DecryptError;
-import com.igexin.log.restapi.entity.LogFileProperties;
 import com.igexin.log.restapi.entity.LogLine;
-import com.igexin.log.restapi.mongod.MongoDecryptErrorRepository;
 import com.igexin.log.restapi.util.CryptoTool;
-import com.igexin.log.restapi.util.FileUtil;
 import com.igexin.log.restapi.util.GzipTool;
 import com.igexin.log.restapi.util.StringUtil;
+import com.igexin.log.restapi.weed.WeedFSClientService;
+import com.igexin.log.restapi.weed.WeedFSFile;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LogFileParseTask implements Runnable, LogFileParser.ParserEventListener {
 
-    public static final int VERBOSE = 0x01;
-
-    private LogFileProperties properties;
+    private static final Logger LOG = LoggerFactory.getLogger(LogFileParseTask.class);
 
     private List<SenderInterface> senderList = new ArrayList<>();
 
-    private boolean decryptFailed = false;
+    private GraylogClientService graylogService;
 
-    private DecryptError decryptError = null;
+    private WeedFSClientService weedService;
 
-    public static LogFileParseTask create(LogFileProperties properties) {
+    private LogFileProperties properties;
+
+    private AtomicBoolean decryptFailed = new AtomicBoolean(false);
+
+    public static LogFileParseTask create(final LogFileProperties properties,
+                                          final GraylogClientService graylogService,
+                                          final WeedFSClientService weedService) {
         LogFileParseTask task = new LogFileParseTask();
-        task.setProperties(properties);
+        task.properties = properties;
+        task.graylogService = graylogService;
+        task.weedService = weedService;
         return task;
-    }
-
-    public void setProperties(LogFileProperties properties) {
-        this.properties = properties;
     }
 
     @Override
@@ -43,33 +46,28 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
         if (properties == null) {
             return;
         }
-        String workPath = properties.getWorkPath();
-        String inFilePath = workPath + "/" + properties.getFilename();
+        String currentPath = properties.tempPath();
+        String inFilePath = currentPath + "/" + properties.getFilename();
         String unzipFilename = StringUtil.randomUid();
 
         // Check temp dir exist.
-        File tempDir = new File(workPath);
+        File tempDir = new File(currentPath);
         if (!tempDir.exists()) {
-            if (tempDir.mkdirs()) {
+            if (!tempDir.mkdirs()) {
                 return;
             }
         }
 
-        String outFilePath = workPath + "/" + unzipFilename;
+        String outFilePath = currentPath + "/" + unzipFilename;
         boolean successful = GzipTool.decompress(inFilePath, outFilePath);
         if (successful) {
             LocalFileSender localFileSender = LocalFileSender.create(properties);
             senderList.add(localFileSender);
 
             // 日志级别为 verbose 的默认不发送到 graylog.
-            if (properties.getLevel() != VERBOSE) {
-                GrayLogSender grayLogSender = new GrayLogSender();
-                senderList.add(grayLogSender);
+            if (properties.getLevel() != Constants.VERBOSE) {
+                senderList.add(graylogService);
             }
-
-            decryptFailed = false;
-            decryptError = new DecryptError();
-            decryptError.setTimestamp(System.currentTimeMillis());
 
             LogFileParser parser = new LogFileParser();
             parser.setListener(this);
@@ -83,6 +81,10 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
 
     @Override
     public void output(long timestamp, String encryptedTag, String encryptedMsg, short layoutId, int attachmentId) {
+        if (decryptFailed.get()) {
+            return;
+        }
+
         String platform = properties.getPlatform();
         String appId = properties.getAppId();
         int level = properties.getLevel();
@@ -95,58 +97,59 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
         String tag = CryptoTool.AESDecrypt(appId, encryptedTag);
         String msg = CryptoTool.AESDecrypt(appId, encryptedMsg);
 
-        if (tag.equalsIgnoreCase(Constants.CRYPTO_ERROR) || msg.equalsIgnoreCase(Constants.CRYPTO_ERROR)) {
-            // 解密失败.
-            decryptFailed = true;
-            decryptError.setUid(uid);
-        } else {
-            String attachment = null;
-            if (attachmentId != -1) {
-                attachment = StringUtil.attachmentName(platform, uid, appId, String.valueOf(attachmentId));
-            }
-            LogLine logLine = LogLine.create(platform, uid, appId,
-                    name, layout, level, timestamp, tag, msg, alias,
-                    attachment);
-            for (SenderInterface sender : senderList) {
-                sender.send(logLine);
-            }
+        if (StringUtil.decryptError(tag) || StringUtil.decryptError(msg)) {
+            decryptFailed.set(true);
+            return;
+        }
+
+        String attachment = null;
+        if (attachmentId != -1) {
+            attachment = StringUtil.attachmentName(platform, uid, appId, String.valueOf(attachmentId));
+        }
+        LogLine logLine = LogLine.create(platform, uid, appId,
+                name, layout, level, timestamp, tag, msg, alias,
+                attachment);
+        for (SenderInterface sender : senderList) {
+            sender.send(logLine);
         }
     }
 
     @Override
     public void result(String inFilePath, boolean successful) {
-        for (SenderInterface sender : senderList) {
-            sender.close();
-        }
-        // 解密失败.
-        if (decryptFailed) {
-            MongoDecryptErrorRepository repository = GlobalReference.decryptErrorRepository();
-            if (repository != null && decryptError != null) {
-                DecryptError exist = repository.findByUid(decryptError.getUid());
-                if (exist == null) {
-                    repository.save(decryptError);
-                }
-            }
-        }
-        // 解析文件或解密文件失败.
-        if (!successful || decryptFailed) {
-            String uid = properties.getUid();
-            String appId = properties.getAppId();
-            String errorDir = GlobalReference.properties().errorDir(properties.getPlatform());
-            String outDirPath = errorDir + "/" + uid + "/" + appId;
-            File outDir = new File(outDirPath);
-            if (!outDir.exists()) {
-                boolean mkDirSuccessful = outDir.mkdirs();
-                if (mkDirSuccessful) {
-                    String outPath = outDirPath + "/" + properties.getOriginalFilename();
-                    FileUtil.copy(inFilePath, outPath);
-                }
-            }
-        }
+        for (SenderInterface object : senderList) {
+            if (object instanceof LocalFileSender) {
+                LocalFileSender sender = (LocalFileSender) object;
+                sender.release();
+                String filename = sender.getFilename();
+                if (!StringUtil.isEmpty(filename)) {
+                    if (successful && !decryptFailed.get()) {
+                        // Close file.
+                        File srcFile = new File(properties.tempPath() + "/" + filename);
+                        File destDir = new File(properties.weedPath());
 
+                        try {
+                            // Move decrypt log file to weed dir.
+                            FileUtils.moveFileToDirectory(srcFile, destDir, true);
+
+                            // Write file to weed fs.
+                            weedService.write(new WeedFSFile(filename));
+                        } catch (IOException e) {
+                            LOG.error("Exception", e);
+                        }
+                    } else {
+                        // Decrypt failed.
+                        File destDir = new File(properties.errorPath());
+                        try {
+                            FileUtils.moveFileToDirectory(new File(inFilePath), destDir, true);
+                        } catch (IOException e) {
+                            LOG.error("Exception", e);
+                        }
+                    }
+                }
+            }
+        }
         // Delete encrypted file.
-        File file = new File(inFilePath);
-        FileUtils.deleteQuietly(file);
+        FileUtils.deleteQuietly(new File(inFilePath));
     }
 
 }

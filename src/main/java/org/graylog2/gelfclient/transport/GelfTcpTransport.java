@@ -155,5 +155,4 @@ public class GelfTcpTransport extends AbstractGelfTransport implements GelfSende
             listener.failed(logLine);
         }
     }
-
 }

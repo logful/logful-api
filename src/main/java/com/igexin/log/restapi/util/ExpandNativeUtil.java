@@ -3,19 +3,19 @@ package com.igexin.log.restapi.util;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
-public class ExpandNativeLibUtil {
+public class ExpandNativeUtil {
 
-    private static class ClassHolder {
-        static ExpandNativeLibUtil util = new ExpandNativeLibUtil();
+    public static void expand() {
+        ExpandNativeUtil util = new ExpandNativeUtil();
+        util.expandLibrary();
     }
 
-    public static ExpandNativeLibUtil util() {
-        return ClassHolder.util;
-    }
-
-    public void expand() {
+    public void expandLibrary() {
         try {
             String path = System.getProperty("user.dir");
             InputStream inputStream;
@@ -39,7 +39,6 @@ public class ExpandNativeLibUtil {
                 IOUtils.copy(inputStream, outputStream);
                 inputStream.close();
                 outputStream.close();
-                System.setProperty("java.library.path", path);
             } else {
                 throw new RuntimeException("Create native lib file failed.");
             }

@@ -1,16 +1,21 @@
 package com.igexin.log.restapi.parse;
 
-import com.igexin.log.restapi.GlobalReference;
-import com.igexin.log.restapi.entity.LogFileProperties;
 import com.igexin.log.restapi.entity.LogLine;
+import com.igexin.log.restapi.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 
 public class LocalFileSender implements SenderInterface {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LocalFileSender.class);
+
     private OutputStream outputStream;
 
-    public static LocalFileSender create(LogFileProperties properties) {
+    private String filename;
+
+    public static LocalFileSender create(final LogFileProperties properties) {
         LocalFileSender localFileSender = new LocalFileSender();
         OutputStream outputStream = localFileSender.createOutputStream(properties);
         if (outputStream != null) {
@@ -25,7 +30,7 @@ public class LocalFileSender implements SenderInterface {
         try {
             outputStream = new FileOutputStream(filePath, true);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            LOG.error("Exception", e);
         }
         if (outputStream != null) {
             localFileSender.setOutputStream(outputStream);
@@ -34,20 +39,23 @@ public class LocalFileSender implements SenderInterface {
     }
 
     private OutputStream createOutputStream(LogFileProperties properties) {
-        String decryptedDir = GlobalReference.properties().decryptedDir(properties.getPlatform());
-        String dirPath = decryptedDir + "/" + properties.getAppId() + "/" + properties.getUid();
-        File dir = new File(dirPath);
-        if (!dir.exists()) {
-            boolean successful = dir.mkdirs();
-            if (!successful) {
+        File tempDir = new File(properties.tempPath());
+        if (!tempDir.exists()) {
+            if (!tempDir.mkdirs()) {
                 return null;
             }
         }
-        String filePath = dirPath + "/" + properties.getOriginalFilename();
+
+        filename = properties.outputFilename();
+        if (StringUtil.isEmpty(filename)) {
+            return null;
+        }
+
+        String filePath = properties.tempPath() + "/" + filename;
         try {
             return new FileOutputStream(filePath, true);
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            LOG.error("Exception", e);
         }
         return null;
     }
@@ -63,7 +71,7 @@ public class LocalFileSender implements SenderInterface {
             try {
                 outputStream.write(line.getBytes());
             } catch (IOException e) {
-                e.printStackTrace();
+                LOG.error("Exception", e);
             }
         }
     }
@@ -74,21 +82,25 @@ public class LocalFileSender implements SenderInterface {
             try {
                 outputStream.write(data.getBytes());
             } catch (IOException e) {
-                e.printStackTrace();
+                LOG.error("Exception", e);
             }
         }
     }
 
     @Override
-    public void close() {
+    public void release() {
         if (outputStream != null) {
             try {
                 outputStream.flush();
                 outputStream.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                LOG.error("Exception", e);
             }
         }
+    }
+
+    public String getFilename() {
+        return filename;
     }
 
 }

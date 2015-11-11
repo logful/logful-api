@@ -3,7 +3,6 @@ package com.igexin.log.restapi.entity;
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.data.annotation.Id;
 
 public class LogLine {

@@ -16,7 +16,6 @@
 
 package org.graylog2.gelfclient;
 
-import com.igexin.log.restapi.GlobalReference;
 import org.graylog2.gelfclient.transport.GelfTcpTransport;
 import org.graylog2.gelfclient.transport.GelfTransport;
 import org.graylog2.gelfclient.transport.GelfUdpTransport;
@@ -41,8 +40,6 @@ public enum GelfTransports {
         switch (transport) {
             case TCP:
                 gelfTransport = new GelfTcpTransport(config);
-                // Add GelfTransportListener
-                gelfTransport.setListener(GlobalReference.reference());
                 break;
             case UDP:
                 gelfTransport = new GelfUdpTransport(config);

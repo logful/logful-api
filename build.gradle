@@ -3,6 +3,9 @@ buildscript {
         springBootVersion = '1.2.5.RELEASE'
     }
     repositories {
+        maven {
+            url "http://clojars.org/repo"
+        }
         mavenCentral()
     }
     dependencies {
@@ -18,8 +21,8 @@ apply plugin: 'spring-boot'
 apply plugin: 'io.spring.dependency-management'
 
 jar {
-    baseName = 'log-restapi'
-    version = '0.0.1'
+    baseName = 'logful-api'
+    version = '0.2.0'
 }
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
@@ -29,9 +32,9 @@ repositories {
 }
 
 dependencies {
-    compile("com.googlecode.json-simple:json-simple:1.1.1")
-    compile("org.springframework.boot:spring-boot-starter-web")
-    compile "org.springframework.boot:spring-boot-configuration-processor"
+    compile 'com.googlecode.json-simple:json-simple:1.1.1'
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework.boot:spring-boot-configuration-processor'
     compile 'io.netty:netty-all:4.0.29.Final'
     compile 'com.fasterxml.jackson.core:jackson-core:2.5.4'
     compile 'org.springframework.data:spring-data-mongodb:1.7.2.RELEASE'
@@ -40,8 +43,8 @@ dependencies {
     compile 'com.intellij:annotations:12.0'
     compile 'commons-io:commons-io:2.4'
     compile 'org.springframework.boot:spring-boot-starter-security'
-    compile("org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE")
-    compile("com.fasterxml.jackson.core:jackson-databind")
+    compile 'org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE'
+    compile 'com.fasterxml.jackson.core:jackson-databind'
     testCompile("org.springframework.boot:spring-boot-starter-test")
 }
 

@@ -1,6 +1,8 @@
 package com.igexin.log.restapi.entity;
 
+import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.ControllerUtil;
+import com.igexin.log.restapi.util.StringUtil;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
 import org.springframework.web.context.request.WebRequest;
@@ -8,10 +10,6 @@ import org.springframework.web.context.request.WebRequest;
 import java.util.zip.CRC32;
 
 public class UserInfo {
-
-    public static final int PLATFORM_ANDROID = 1;
-
-    public static final int PLATFORM_IOS = 2;
 
     @Id
     private String id;
@@ -40,7 +38,7 @@ public class UserInfo {
 
     public static UserInfo create(WebRequest webRequest) {
         UserInfo userInfo = new UserInfo();
-        userInfo.platform = platformNumber(webRequest.getParameter("platform"));
+        userInfo.platform = StringUtil.platformNumber(webRequest.getParameter("platform"));
 
         userInfo.uid = webRequest.getParameter("uid");
         userInfo.alias = webRequest.getParameter("alias");
@@ -78,11 +76,11 @@ public class UserInfo {
     }
 
     public static int getPlatformAndroid() {
-        return PLATFORM_ANDROID;
+        return Constants.PLATFORM_ANDROID;
     }
 
     public static int getPlatformIos() {
-        return PLATFORM_IOS;
+        return Constants.PLATFORM_IOS;
     }
 
     public String getId() {
@@ -173,29 +171,15 @@ public class UserInfo {
         this.level = level;
     }
 
-    public static int platformNumber(String platformString) {
-        if (platformString.equalsIgnoreCase("android")) {
-            return PLATFORM_ANDROID;
-        }
-        if (platformString.equalsIgnoreCase("iOS")) {
-            return PLATFORM_IOS;
-        }
-        return 0;
-    }
-
-    public static String platformString(int platform) {
-        if (platform == PLATFORM_ANDROID) {
-            return "android";
-        }
-        if (platform == PLATFORM_IOS) {
-            return "iOS";
-        }
-        return "unknown";
-    }
 
     @Override
     public int hashCode() {
-        String string = String.format("%d%s%s%s%s%s%s%s%d%s", platform, uid, alias, model, imei, macAddress, osVersion, appId, version, versionString);
+        String string = String.format("%d%s%s%s%s%s%s%s%d%s",
+                platform, uid,
+                alias, model,
+                imei, macAddress,
+                osVersion, appId,
+                version, versionString);
         return string.hashCode();
     }
 
@@ -207,7 +191,7 @@ public class UserInfo {
     public JSONObject toJsonObject() {
         JSONObject jsonObject = new JSONObject();
 
-        jsonObject.put("platform", UserInfo.platformString(platform));
+        jsonObject.put("platform", StringUtil.platformString(platform));
         jsonObject.put("uid", uid);
         jsonObject.put("alias", alias);
         jsonObject.put("model", model);

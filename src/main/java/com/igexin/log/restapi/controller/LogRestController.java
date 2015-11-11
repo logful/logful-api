@@ -1,17 +1,20 @@
 package com.igexin.log.restapi.controller;
 
-import com.igexin.log.restapi.GlobalReference;
 import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
-import com.igexin.log.restapi.entity.LogFileProperties;
 import com.igexin.log.restapi.entity.UserInfo;
-import com.igexin.log.restapi.mongod.*;
+import com.igexin.log.restapi.mongod.MongoConfigRepository;
+import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
+import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
+import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LogFileParseTask;
+import com.igexin.log.restapi.parse.LogFileProperties;
 import com.igexin.log.restapi.util.Checksum;
 import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import com.igexin.log.restapi.util.VersionUtil;
+import com.igexin.log.restapi.weed.WeedFSClientService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,19 +37,19 @@ public class LogRestController {
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoLogLineRepository mongoDbLogLineRepository;
-
-    @Autowired
     private MongoUserInfoRepository mongoUserInfoRepository;
-
-    @Autowired
-    private MongoDecryptErrorRepository mongoDecryptErrorRepository;
 
     @Autowired
     private MongoConfigRepository mongoConfigRepository;
 
     @Autowired
     private MongoControlProfileRepository mongoControlProfileRepository;
+
+    @Autowired
+    GraylogClientService graylogClientService;
+
+    @Autowired
+    WeedFSClientService weedFSClientService;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -364,11 +367,6 @@ public class LogRestController {
                                    String alias,
                                    String fileSum,
                                    MultipartFile logFile) {
-        GlobalReference.saveProperties(logfulProperties);
-        GlobalReference.saveLogLineRepository(mongoDbLogLineRepository);
-        GlobalReference.saveDecryptErrorRepository(mongoDecryptErrorRepository);
-        GlobalReference.listen();
-
         String tempDirPath = logfulProperties.tempDir();
         File tempDir = new File(tempDirPath);
         if (!tempDir.exists()) {
@@ -402,9 +400,13 @@ public class LogRestController {
         properties.setLayouts(layouts);
         properties.setFilename(filename);
         properties.setOriginalFilename(originalFilename);
-        properties.setWorkPath(tempDirPath);
+        properties.setWorkPath(logfulProperties.getPath());
 
-        LogFileParseTask task = LogFileParseTask.create(properties);
+        LogFileParseTask task = LogFileParseTask.create(
+                properties,
+                graylogClientService,
+                weedFSClientService
+        );
         threadPoolTaskExecutor.submit(task);
 
         return responseJson(0, "");
