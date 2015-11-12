@@ -2,6 +2,7 @@ package com.igexin.log.restapi.weed;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
+import com.igexin.log.restapi.mongod.MongoFileMetaRepository;
 import com.igexin.log.restapi.util.StringUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -21,6 +22,10 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -32,12 +37,13 @@ public class WeedFSClientService implements ChannelFutureListener {
     LogfulProperties logfulProperties;
 
     @Autowired
-    WeedFSWriterThread weedFSWriterThread;
-
-    @Autowired
-    WeedFSHandlerThread weedFSHandlerThread;
+    MongoFileMetaRepository mongoFileMetaRepository;
 
     private final EventLoopGroup workerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(getClass(), true));
+
+    private final BlockingQueue<WeedFSFile> writeQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
+
+    private final BlockingQueue<WeedFSFile> handleQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
 
     @PostConstruct
     public void create() {
@@ -73,6 +79,16 @@ public class WeedFSClientService implements ChannelFutureListener {
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         bootstrap.remoteAddress(socketAddress);
 
+        URI uri;
+        try {
+            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, logfulProperties.weedTimeToLive()));
+        } catch (URISyntaxException e) {
+            throw new RuntimeException("Weed fs submit uri syntax error!");
+        }
+
+        String weedDir = logfulProperties.weedDir();
+        final WeedFSWriterThread weedFSWriterThread = new WeedFSWriterThread(uri, weedDir, writeQueue);
+        final WeedFSHandlerThread weedFSHandlerThread = new WeedFSHandlerThread(weedDir, mongoFileMetaRepository, handleQueue);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(final SocketChannel channel) throws Exception {
@@ -90,8 +106,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                                 content.readBytes(result);
 
                                 // Put handler thread to process success archive log file.
-                                WeedFSFile weedFSFile = new WeedFSFile(result);
-                                weedFSHandlerThread.handle(weedFSFile);
+                                write(new WeedFSFile(result));
                             }
                         }
                     }
@@ -121,10 +136,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                 });
             }
         });
-
         bootstrap.connect().addListener(this);
-        weedFSWriterThread.config(host, port, logfulProperties.weedTimeToLive(), logfulProperties.weedDir());
-        weedFSHandlerThread.config(logfulProperties.weedDir());
     }
 
     public void reconnect(final EventLoopGroup eventLoopGroup) {
@@ -138,7 +150,7 @@ public class WeedFSClientService implements ChannelFutureListener {
 
     public void write(WeedFSFile file) {
         try {
-            weedFSWriterThread.write(file);
+            writeQueue.put(file);
         } catch (InterruptedException e) {
             LOG.error("Exception", e);
         }
