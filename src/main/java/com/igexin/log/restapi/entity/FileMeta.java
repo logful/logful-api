@@ -1,6 +1,12 @@
 package com.igexin.log.restapi.entity;
 
+import com.igexin.log.restapi.util.StringUtil;
+import org.springframework.data.annotation.Id;
+
 public class FileMeta {
+
+    @Id
+    private String id;
 
     private short platform;
 
@@ -10,15 +16,11 @@ public class FileMeta {
 
     private String loggerName;
 
-    private String dateString;
+    private String date;
 
     private short level;
 
     private int fragment;
-
-    private String host;
-
-    private short port;
 
     private String fid;
 
@@ -28,11 +30,9 @@ public class FileMeta {
                                   String uid,
                                   String appId,
                                   String loggerName,
-                                  String dateString,
+                                  String date,
                                   short level,
                                   int fragment,
-                                  String host,
-                                  short port,
                                   String fid,
                                   long size) {
         FileMeta meta = new FileMeta();
@@ -40,14 +40,28 @@ public class FileMeta {
         meta.setUid(uid);
         meta.setAppId(appId);
         meta.setLoggerName(loggerName);
-        meta.setDateString(dateString);
+        meta.setDate(date);
         meta.setLevel(level);
         meta.setFragment(fragment);
-        meta.setHost(host);
-        meta.setPort(port);
         meta.setFid(fid);
         meta.setSize(size);
         return meta;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public short getPlatform() {
@@ -82,14 +96,6 @@ public class FileMeta {
         this.loggerName = loggerName;
     }
 
-    public String getDateString() {
-        return dateString;
-    }
-
-    public void setDateString(String dateString) {
-        this.dateString = dateString;
-    }
-
     public short getLevel() {
         return level;
     }
@@ -106,22 +112,6 @@ public class FileMeta {
         this.fragment = fragment;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public short getPort() {
-        return port;
-    }
-
-    public void setPort(short port) {
-        this.port = port;
-    }
-
     public String getFid() {
         return fid;
     }
@@ -136,5 +126,9 @@ public class FileMeta {
 
     public void setSize(long size) {
         this.size = size;
+    }
+
+    public String originalFilename() {
+        return loggerName + "-" + date + "-" + StringUtil.levelString(level) + "-" + fragment;
     }
 }

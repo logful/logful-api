@@ -84,9 +84,13 @@ public class Constants {
 
     public static final int DEFAULT_GRAY_LEVEL = 100;
 
-    public static final int QUEUE_CAPACITY = 512;
+    public static final int GRAYLOG_QUEUE_CAPACITY = 5120;
 
-    public static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
+    public static final int WEED_QUEUE_CAPACITY = 5120;
+
+    public static final int PARSER_QUEUE_CAPACITY = 2048;
+
+    public static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 4;
 
     public static final String CLIENT_ID = "525b8747323d49078a96e49f0189de98";
 
@@ -97,9 +101,4 @@ public class Constants {
     public static final int PLATFORM_IOS = 2;
 
     public static final int RECONNECT_WEED_DELAY = 10;
-
-    /**
-     * 本地配置文件路径.
-     */
-    public static final String LOCAL_CONFIG_FILE_PATH = "/etc/logful/api/api.conf";
 }

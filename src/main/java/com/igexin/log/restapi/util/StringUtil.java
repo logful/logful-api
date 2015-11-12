@@ -40,6 +40,31 @@ public class StringUtil {
         return 1;
     }
 
+    public static String levelString(int level) {
+        if (level == 1) {
+            return "verbose";
+        }
+        if (level == 2) {
+            return "debug";
+        }
+        if (level == 3) {
+            return "info";
+        }
+        if (level == 4) {
+            return "warn";
+        }
+        if (level == 5) {
+            return "error";
+        }
+        if (level == 6) {
+            return "exception";
+        }
+        if (level == 7) {
+            return "fatal";
+        }
+        return "verbose";
+    }
+
     public static int platformNumber(String platformString) {
         if (platformString.equalsIgnoreCase("android")) {
             return Constants.PLATFORM_ANDROID;

@@ -50,7 +50,7 @@ public class GraylogClientService implements SenderInterface {
         InetSocketAddress socketAddress = new InetSocketAddress(host, port);
         GelfConfiguration config = new GelfConfiguration(socketAddress)
                 .transport(GelfTransports.TCP)
-                .queueSize(Constants.QUEUE_CAPACITY)
+                .queueSize(Constants.GRAYLOG_QUEUE_CAPACITY)
                 .connectTimeout(5000)
                 .reconnectDelay(10000)
                 .tcpNoDelay(true)

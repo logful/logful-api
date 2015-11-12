@@ -132,6 +132,7 @@ public class GelfSenderThread {
         } finally {
             lock.unlock();
         }
+        keepRunning.set(true);
         senderThread.start();
     }
 

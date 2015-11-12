@@ -30,7 +30,7 @@ public class LogfulApplication implements AsyncConfigurer {
     public ThreadPoolTaskExecutor getAsyncExecutor() {
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setMaxPoolSize(Constants.THREAD_POOL_SIZE);
-        taskExecutor.setQueueCapacity(Constants.QUEUE_CAPACITY);
+        taskExecutor.setQueueCapacity(Constants.PARSER_QUEUE_CAPACITY);
         taskExecutor.setThreadNamePrefix("logful-api-");
         taskExecutor.initialize();
         return taskExecutor;

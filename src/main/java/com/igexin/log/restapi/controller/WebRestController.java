@@ -4,9 +4,11 @@ import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
+import com.igexin.log.restapi.entity.FileMeta;
 import com.igexin.log.restapi.entity.UserInfo;
 import com.igexin.log.restapi.mongod.MongoConfigRepository;
 import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
+import com.igexin.log.restapi.mongod.MongoFileMetaRepository;
 import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
 import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LocalFileSender;
@@ -15,11 +17,9 @@ import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.CryptoTool;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
-import org.apache.commons.lang.StringUtils;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.pojava.datetime.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -51,6 +51,9 @@ public class WebRestController {
     private MongoControlProfileRepository mongoControlProfileRepository;
 
     @Autowired
+    private MongoFileMetaRepository mongoFileMetaRepository;
+
+    @Autowired
     GraylogClientService graylogClientService;
 
     @Autowired
@@ -61,7 +64,7 @@ public class WebRestController {
      *
      * @return 状态信息
      */
-    @RequestMapping(value = "/web/status",
+    @RequestMapping(value = "/web/dashboard/status",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -80,7 +83,7 @@ public class WebRestController {
      *
      * @return 资源占用信息
      */
-    @RequestMapping(value = "/web/resource",
+    @RequestMapping(value = "/web/dashboard/resource",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -96,7 +99,7 @@ public class WebRestController {
         jsonObject.put("maxPoolSize", threadPoolTaskExecutor.getMaxPoolSize());
         jsonObject.put("poolSize", threadPoolTaskExecutor.getPoolSize());
 
-        jsonObject.put("capacity", Constants.QUEUE_CAPACITY);
+        jsonObject.put("capacity", Constants.PARSER_QUEUE_CAPACITY);
         jsonObject.put("active", threadPoolTaskExecutor.getActiveCount());
 
         return jsonObject.toString();
@@ -109,7 +112,7 @@ public class WebRestController {
      * @param logFile Log file
      * @return Response result
      */
-    @RequestMapping(value = "/web/decrypt",
+    @RequestMapping(value = "/web/util/decrypt/upload",
             method = RequestMethod.POST,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -179,7 +182,7 @@ public class WebRestController {
      * @param uri Uri string
      * @return Log file stream
      */
-    @RequestMapping(value = "/web/download/{uri}",
+    @RequestMapping(value = "/web/util/decrypt/download/{uri}",
             method = RequestMethod.GET)
     public ResponseEntity<InputStreamResource> downloadLogFile(@PathVariable String uri) {
 
@@ -211,146 +214,52 @@ public class WebRestController {
     }
 
     /**
-     * Fetch decrypted log file list.
+     * Query log file list.
      *
-     * @param webRequest WebRequest
-     * @return Decrypted log file list in json string
+     * @param json Json payload.
+     * @return Log file list
      */
-    @RequestMapping(value = "/web/log/files",
-            method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+    @RequestMapping(value = "/web/util/log/file/list",
+            method = RequestMethod.POST)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public String fetchDecryptedLogFileList(final WebRequest webRequest) {
-        String platform = webRequest.getParameter("platform");
-        String uid = webRequest.getParameter("uid");
-        String appId = webRequest.getParameter("appId");
-        String date = webRequest.getParameter("date");
-        String startDate = webRequest.getParameter("startDate");
-        String endDate = webRequest.getParameter("endDate");
+    public String queryLogFileList(@RequestBody String json) {
 
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
+        JSONObject object = new JSONObject(json);
+        if (checkFields(object, new String[]{"platform", "uid", "appId", "date"})) {
+            String platform = object.optString("platform");
+            String uid = object.optString("uid");
+            String appId = object.optString("appId");
+            String date = object.optString("date");
 
-        JSONArray jsonArray = new JSONArray();
-        if (ControllerUtil.isEmpty(date)
-                && ControllerUtil.isEmpty(startDate)
-                && ControllerUtil.isEmpty(endDate)) {
-            return jsonArray.toString();
-        }
-
-        if (ControllerUtil.isEmpty(appId) || ControllerUtil.isEmpty(uid)) {
-            return jsonArray.toString();
-        }
-
-        String logDirPath = logfulProperties.decryptedDir(platform) + "/" + appId + "/" + uid;
-        File logDir = new File(logDirPath);
-        if (!logDir.exists() || !logDir.isDirectory()) {
-            return jsonArray.toString();
-        }
-
-        File[] files = logDir.listFiles();
-        if (files == null) {
-            return jsonArray.toString();
-        }
-
-        String uriPrefix = "?platform=" + platform.toLowerCase() + "&appId=" + appId + "&uid=" + uid + "&filename=";
-        if (!ControllerUtil.isEmpty(date)) {
-            try {
-                String dateString = DateTimeUtil.logFileNameDateString(new DateTime(date).toDate());
-                for (File file : files) {
-                    String[] parts = file.getName().replace(".bin", "").split("-");
-                    if (parts.length >= 3) {
-                        if (parts[1].equalsIgnoreCase(dateString)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("filename", file.getName());
-                            jsonObject.put("level", StringUtil.level(parts[2]));
-                            jsonObject.put("size", file.length());
-                            jsonObject.put("uri", uriPrefix + file.getName());
-                            jsonArray.put(jsonObject);
-                        }
-                    }
-                }
-            } catch (Exception e) {
+            if (!ControllerUtil.checkPlatform(platform)) {
                 throw new BadRequestException();
             }
-        }
 
-        if (!ControllerUtil.isEmpty(startDate) && !ControllerUtil.isEmpty(endDate)) {
-            long startTime, endTime;
-            try {
-                startTime = new DateTime(startDate).toDate().getTime();
-                endTime = new DateTime(endDate).toDate().getTime();
-                for (File file : files) {
-                    String[] parts = file.getName().replace(".bin", "").split("-");
-                    if (parts.length >= 3) {
-                        long dateTime = new DateTime(parts[2]).toDate().getTime();
-                        if (dateTime >= startTime && dateTime <= endTime) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("filename", file.getName());
-                            jsonObject.put("level", StringUtil.level(parts[2]));
-                            jsonObject.put("size", file.length());
+            Criteria criteria = Criteria.where("platform").is(StringUtil.platformNumber(platform));
+            criteria.and("uid").is(uid);
+            criteria.and("appId").is(appId);
+            criteria.and("date").is(date);
 
-                            String filename = StringUtils.replace(file.getName(), ".bin", "");
-                            jsonObject.put("uri", uriPrefix + filename);
+            List<FileMeta> fileMetaList = mongoFileMetaRepository.findAllByCriteria(criteria);
 
-                            jsonArray.put(jsonObject);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                throw new BadRequestException();
+            JSONArray fileMetaArray = new JSONArray();
+            for (FileMeta fileMeta : fileMetaList) {
+                JSONObject fileMetaObject = new JSONObject();
+
+                fileMetaObject.put("filename", fileMeta.originalFilename());
+                fileMetaObject.put("level", fileMeta.getLevel());
+                fileMetaObject.put("size", fileMeta.getSize());
+                fileMetaObject.put("fid", fileMeta.getFid());
+
+                fileMetaArray.put(fileMetaObject);
             }
-        }
 
-        return jsonArray.toString();
-    }
-
-    /**
-     * Download decrypted log file.
-     *
-     * @param platform Platform
-     * @param uid      User unique id
-     * @param appId    Application id
-     * @param filename Log file name
-     * @return Log file stream
-     */
-    @RequestMapping(value = "/web/log/fetch",
-            method = RequestMethod.GET)
-    public ResponseEntity<InputStreamResource> downloadLogFile(@RequestParam("platform") String platform,
-                                                               @RequestParam("appId") String appId,
-                                                               @RequestParam("uid") String uid,
-                                                               @RequestParam("filename") String filename) {
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
-        if (!filename.contains(".bin")) {
-            filename = filename + ".bin";
-        }
-
-        String filePath = logfulProperties.decryptedDir(platform) + "/" + appId + "/" + uid + "/" + filename;
-        File logFile = new File(filePath);
-        if (logFile.exists() && logFile.isFile()) {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_PLAIN);
-            headers.setContentLength(logFile.length());
-            headers.setContentDispositionFormData("attachment", StringUtils.replace(filename, ".bin", ".log"));
-
-            InputStreamResource inputStreamResource;
-            try {
-                inputStreamResource = new InputStreamResource(new FileInputStream(filePath));
-                return new ResponseEntity<>(inputStreamResource, headers, HttpStatus.OK);
-            } catch (FileNotFoundException e) {
-                throw new ResourceNotFoundException();
-            }
+            return fileMetaArray.toString();
         } else {
-            throw new ResourceNotFoundException();
+            throw new BadRequestException();
         }
     }
-
 
     /**
      * Get user unique id.
@@ -358,7 +267,7 @@ public class WebRestController {
      * @param webRequest WebRequest
      * @return Unique id list
      */
-    @RequestMapping(value = "/web/uid",
+    @RequestMapping(value = "/web/uid/list",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -404,7 +313,7 @@ public class WebRestController {
      * @param uid      Uid
      * @return User info
      */
-    @RequestMapping(value = "/web/uid/{platform}/{uid}",
+    @RequestMapping(value = "web/uid/view/{platform}/{uid}",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -454,7 +363,7 @@ public class WebRestController {
      *
      * @return Clear result
      */
-    @RequestMapping(value = "/web/clear",
+    @RequestMapping(value = "/web/util/clear",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -487,7 +396,7 @@ public class WebRestController {
      * @param level Level value
      * @return Response
      */
-    @RequestMapping(value = "/web/level",
+    @RequestMapping(value = "/web/control/level",
             method = RequestMethod.POST,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -514,7 +423,7 @@ public class WebRestController {
      *
      * @return Gray level response
      */
-    @RequestMapping(value = "/web/level",
+    @RequestMapping(value = "/web/control/level",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -538,7 +447,7 @@ public class WebRestController {
      * @param uri Attachment uri
      * @return Attachment resource
      */
-    @RequestMapping(value = "/web/attachment/download/{uri}",
+    @RequestMapping(value = "/web/util/attachment/download/{uri}",
             method = RequestMethod.GET)
     public ResponseEntity<InputStreamResource> downloadAttachment(@PathVariable String uri) {
         if (StringUtil.isEmpty(uri)) {
@@ -564,7 +473,7 @@ public class WebRestController {
         }
     }
 
-    @RequestMapping(value = "/web/control",
+    @RequestMapping(value = "/web/control/profile/edit",
             method = RequestMethod.POST)
     @ResponseBody
     public ControlProfile saveControlProfile(@RequestBody ControlProfile profile) {
@@ -576,14 +485,14 @@ public class WebRestController {
         }
     }
 
-    @RequestMapping(value = "/web/control",
+    @RequestMapping(value = "/web/control/profile/list",
             method = RequestMethod.GET)
     public ResponseEntity<List<ControlProfile>> listControlProfile() {
         List<ControlProfile> profiles = mongoControlProfileRepository.findAll();
         return new ResponseEntity<>(profiles, HttpStatus.OK);
     }
 
-    @RequestMapping(value = "/web/control/{id}",
+    @RequestMapping(value = "/web/control/profile/view/{id}",
             method = RequestMethod.DELETE)
     public void deleteControlProfile(@PathVariable String id) {
         if (!mongoControlProfileRepository.delete(id)) {
@@ -596,6 +505,15 @@ public class WebRestController {
             criteria.and(key).is(value);
         }
         return criteria;
+    }
+
+    private boolean checkFields(JSONObject object, String[] fields) {
+        for (String field : fields) {
+            if (!object.has(field)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @ResponseStatus(value = HttpStatus.BAD_REQUEST)

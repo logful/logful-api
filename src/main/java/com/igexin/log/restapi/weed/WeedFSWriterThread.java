@@ -1,6 +1,5 @@
 package com.igexin.log.restapi.weed;
 
-import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.StringUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -10,26 +9,18 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-@Component
 public class WeedFSWriterThread {
-
-    private static final Logger LOG = LoggerFactory.getLogger(WeedFSWriterThread.class);
 
     private final ReentrantLock lock;
 
@@ -41,16 +32,9 @@ public class WeedFSWriterThread {
 
     private Channel channel;
 
-    private URI uri;
-
-    private String workingDir;
-
-    private final BlockingQueue<WeedFSFile> queue;
-
-    public WeedFSWriterThread() {
+    public WeedFSWriterThread(final URI uri, final String dirPath, final BlockingQueue<WeedFSFile> queue) {
         this.lock = new ReentrantLock();
         this.connectedCond = lock.newCondition();
-        this.queue = new LinkedBlockingQueue<WeedFSFile>(Constants.QUEUE_CAPACITY);
 
         Runnable runnable = new Runnable() {
             @Override
@@ -75,8 +59,8 @@ public class WeedFSWriterThread {
                         }
 
                         if (weedFSFile != null) {
-                            if (channel != null && channel.isActive() && uri != null && !StringUtil.isEmpty(workingDir)) {
-                                String filePath = workingDir + "/" + weedFSFile.getFilename();
+                            if (channel != null && channel.isActive() && uri != null && !StringUtil.isEmpty(dirPath)) {
+                                String filePath = dirPath + "/" + weedFSFile.getFilename();
                                 File file = new File(filePath);
                                 try {
                                     String boundary = UUID.randomUUID().toString();
@@ -87,7 +71,6 @@ public class WeedFSWriterThread {
                                     String end = "\r\n" + "--" + boundary + "--\r\n";
 
                                     ByteBuf buffer = Unpooled.wrappedBuffer(start.getBytes(), FileUtils.readFileToByteArray(file), end.getBytes());
-
                                     DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
                                             HttpMethod.POST,
                                             uri.toASCIIString(),
@@ -105,6 +88,7 @@ public class WeedFSWriterThread {
                                     // Ignore Exception.
                                 }
                             }
+                            weedFSFile = null;
                         }
                     } catch (InterruptedException e) {
                         // Ignore Exception.
@@ -119,15 +103,6 @@ public class WeedFSWriterThread {
         writerThread.setDaemon(true);
     }
 
-    public void config(String host, int port, String ttl, String dirPath) {
-        this.workingDir = dirPath;
-        try {
-            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, ttl));
-        } catch (URISyntaxException e) {
-            LOG.error("Exception", e);
-        }
-    }
-
     public void start(Channel channel) {
         lock.lock();
         try {
@@ -137,10 +112,6 @@ public class WeedFSWriterThread {
             lock.unlock();
         }
         writerThread.start();
-    }
-
-    public void write(WeedFSFile file) throws InterruptedException {
-        queue.put(file);
     }
 
     public void stop() {
