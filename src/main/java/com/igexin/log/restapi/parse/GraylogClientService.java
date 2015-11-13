@@ -50,11 +50,11 @@ public class GraylogClientService implements SenderInterface {
         InetSocketAddress socketAddress = new InetSocketAddress(host, port);
         GelfConfiguration config = new GelfConfiguration(socketAddress)
                 .transport(GelfTransports.TCP)
-                .queueSize(Constants.GRAYLOG_QUEUE_CAPACITY)
-                .connectTimeout(5000)
-                .reconnectDelay(10000)
+                .queueSize(logfulProperties.getGraylog().getQueueCapacity())
+                .connectTimeout(logfulProperties.getGraylog().getConnectTimeout())
+                .reconnectDelay(logfulProperties.getGraylog().getReconnectDelay())
                 .tcpNoDelay(true)
-                .sendBufferSize(1048576);
+                .sendBufferSize(logfulProperties.getGraylog().getSendBufferSize());
         graylogTransport = GelfTransports.create(config);
         graylogTransport.setListener(new GelfTransportListener() {
             @Override

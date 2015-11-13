@@ -99,7 +99,7 @@ public class WebRestController {
         jsonObject.put("maxPoolSize", threadPoolTaskExecutor.getMaxPoolSize());
         jsonObject.put("poolSize", threadPoolTaskExecutor.getPoolSize());
 
-        jsonObject.put("capacity", Constants.PARSER_QUEUE_CAPACITY);
+        jsonObject.put("capacity", logfulProperties.getParser().getQueueCapacity());
         jsonObject.put("active", threadPoolTaskExecutor.getActiveCount());
 
         return jsonObject.toString();

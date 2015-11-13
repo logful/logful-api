@@ -74,14 +74,6 @@ public class Constants {
 
     public static final int DEFAULT_GRAY_LEVEL = 100;
 
-    public static final int GRAYLOG_QUEUE_CAPACITY = 5120;
-
-    public static final int WEED_QUEUE_CAPACITY = 5120;
-
-    public static final int PARSER_QUEUE_CAPACITY = 2048;
-
-    public static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 4;
-
     public static final String CLIENT_ID = "525b8747323d49078a96e49f0189de98";
 
     public static final String CLIENT_SECRET = "02ce8e2adba94ae5a4807e3f12ea34f3";
@@ -89,8 +81,6 @@ public class Constants {
     public static final int PLATFORM_ANDROID = 1;
 
     public static final int PLATFORM_IOS = 2;
-
-    public static final int RECONNECT_WEED_DELAY = 10;
 
     public static final String LOG_FILE_EXTENSION = "txt";
 }

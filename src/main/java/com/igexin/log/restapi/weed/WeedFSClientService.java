@@ -1,6 +1,5 @@
 package com.igexin.log.restapi.weed;
 
-import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.mongod.MongoWeedAttachFileMetaRepository;
 import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
@@ -43,14 +42,25 @@ public class WeedFSClientService implements ChannelFutureListener {
 
     private final EventLoopGroup workerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(getClass(), true));
 
-    private final BlockingQueue<WeedFSFile> writeQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
-
-    private final BlockingQueue<WeedFSFile> handleQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
-
     private final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap = new ConcurrentHashMap<>();
+
+    private static Queue queue;
+
+    private static class Queue {
+
+        public final BlockingQueue<WeedFSFile> writeQueue;
+
+        public final BlockingQueue<WeedFSFile> handleQueue;
+
+        public Queue(LogfulProperties properties) {
+            this.writeQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
+            this.handleQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
+        }
+    }
 
     @PostConstruct
     public void create() {
+        queue = new Queue(logfulProperties);
         createBootstrap(workerGroup);
     }
 
@@ -80,6 +90,7 @@ public class WeedFSClientService implements ChannelFutureListener {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup);
         bootstrap.channel(NioSocketChannel.class);
+        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, logfulProperties.getWeed().getConnectTimeout());
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         bootstrap.remoteAddress(socketAddress);
 
@@ -91,12 +102,12 @@ public class WeedFSClientService implements ChannelFutureListener {
         }
 
         String weedDir = logfulProperties.weedDir();
-        final WeedFSWriterThread weedFSWriterThread = new WeedFSWriterThread(uri, weedDir, writeQueue);
+        final WeedFSWriterThread weedFSWriterThread = new WeedFSWriterThread(uri, weedDir, queue.writeQueue);
         final WeedFSHandlerThread weedFSHandlerThread = new WeedFSHandlerThread(weedDir,
                 mongoWeedLogFileMetaRepository,
                 mongoWeedAttachFileMetaRepository,
                 weedMetaMap,
-                handleQueue);
+                queue.handleQueue);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(final SocketChannel channel) throws Exception {
@@ -117,7 +128,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                                     content.readBytes(result);
 
                                     try {
-                                        handleQueue.put(WeedFSFile.create(result));
+                                        queue.handleQueue.put(WeedFSFile.create(result));
                                     } catch (InterruptedException e) {
                                         LOG.error("Exception", e);
                                     }
@@ -160,13 +171,13 @@ public class WeedFSClientService implements ChannelFutureListener {
             public void run() {
                 createBootstrap(eventLoopGroup);
             }
-        }, Constants.RECONNECT_WEED_DELAY, TimeUnit.SECONDS);
+        }, logfulProperties.getWeed().getReconnectDelay(), TimeUnit.MILLISECONDS);
     }
 
     public void write(WeedFSFile file, WeedFSMeta meta) {
         // Put meta of current file.
         try {
-            writeQueue.put(file);
+            queue.writeQueue.put(file);
             weedMetaMap.put(file.getKey(), meta);
         } catch (InterruptedException e) {
             LOG.error("Exception", e);

@@ -9,9 +9,19 @@ public class LogfulProperties {
 
     private String path;
 
+    private Parser parser;
+
     private Weed weed;
 
     private Graylog graylog;
+
+    public Parser getParser() {
+        return parser;
+    }
+
+    public void setParser(Parser parser) {
+        this.parser = parser;
+    }
 
     public Graylog getGraylog() {
         return graylog;
@@ -77,11 +87,64 @@ public class LogfulProperties {
         return getWeed().getTtl();
     }
 
+    public static class Parser {
+
+        private int maxThreads;
+
+        private int queueCapacity;
+
+        public int getMaxThreads() {
+            return maxThreads;
+        }
+
+        public void setMaxThreads(int maxThreads) {
+            this.maxThreads = maxThreads;
+        }
+
+        public int getQueueCapacity() {
+            return queueCapacity;
+        }
+
+        public void setQueueCapacity(int queueCapacity) {
+            this.queueCapacity = queueCapacity;
+        }
+    }
+
     public static class Weed {
 
         private Master master;
 
+        private int connectTimeout;
+
+        private int reconnectDelay;
+
+        private int queueCapacity;
+
         private String ttl;
+
+        public int getConnectTimeout() {
+            return connectTimeout;
+        }
+
+        public void setConnectTimeout(int connectTimeout) {
+            this.connectTimeout = connectTimeout;
+        }
+
+        public int getReconnectDelay() {
+            return reconnectDelay;
+        }
+
+        public void setReconnectDelay(int reconnectDelay) {
+            this.reconnectDelay = reconnectDelay;
+        }
+
+        public int getQueueCapacity() {
+            return queueCapacity;
+        }
+
+        public void setQueueCapacity(int queueCapacity) {
+            this.queueCapacity = queueCapacity;
+        }
 
         public String getTtl() {
             return ttl;
@@ -128,6 +191,46 @@ public class LogfulProperties {
         private String host;
 
         private int port;
+
+        private int connectTimeout;
+
+        private int reconnectDelay;
+
+        private int queueCapacity;
+
+        private int sendBufferSize;
+
+        public int getConnectTimeout() {
+            return connectTimeout;
+        }
+
+        public void setConnectTimeout(int connectTimeout) {
+            this.connectTimeout = connectTimeout;
+        }
+
+        public int getReconnectDelay() {
+            return reconnectDelay;
+        }
+
+        public void setReconnectDelay(int reconnectDelay) {
+            this.reconnectDelay = reconnectDelay;
+        }
+
+        public int getQueueCapacity() {
+            return queueCapacity;
+        }
+
+        public void setQueueCapacity(int queueCapacity) {
+            this.queueCapacity = queueCapacity;
+        }
+
+        public int getSendBufferSize() {
+            return sendBufferSize;
+        }
+
+        public void setSendBufferSize(int sendBufferSize) {
+            this.sendBufferSize = sendBufferSize;
+        }
 
         public String getHost() {
             return host;
