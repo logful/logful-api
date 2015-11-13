@@ -2,7 +2,8 @@ package com.igexin.log.restapi.weed;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
-import com.igexin.log.restapi.mongod.MongoFileMetaRepository;
+import com.igexin.log.restapi.mongod.MongoWeedAttachFileMetaRepository;
+import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
 import com.igexin.log.restapi.util.StringUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -10,10 +11,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.*;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -37,13 +36,18 @@ public class WeedFSClientService implements ChannelFutureListener {
     LogfulProperties logfulProperties;
 
     @Autowired
-    MongoFileMetaRepository mongoFileMetaRepository;
+    MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
+
+    @Autowired
+    MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
 
     private final EventLoopGroup workerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(getClass(), true));
 
     private final BlockingQueue<WeedFSFile> writeQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
 
     private final BlockingQueue<WeedFSFile> handleQueue = new LinkedBlockingQueue<>(Constants.WEED_QUEUE_CAPACITY);
+
+    private final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void create() {
@@ -88,25 +92,36 @@ public class WeedFSClientService implements ChannelFutureListener {
 
         String weedDir = logfulProperties.weedDir();
         final WeedFSWriterThread weedFSWriterThread = new WeedFSWriterThread(uri, weedDir, writeQueue);
-        final WeedFSHandlerThread weedFSHandlerThread = new WeedFSHandlerThread(weedDir, mongoFileMetaRepository, handleQueue);
+        final WeedFSHandlerThread weedFSHandlerThread = new WeedFSHandlerThread(weedDir,
+                mongoWeedLogFileMetaRepository,
+                mongoWeedAttachFileMetaRepository,
+                weedMetaMap,
+                handleQueue);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(final SocketChannel channel) throws Exception {
                 channel.pipeline().addLast(new HttpResponseDecoder());
                 channel.pipeline().addLast(new HttpRequestEncoder());
+                channel.pipeline().addLast("aggregator", new HttpObjectAggregator(65535));
                 channel.pipeline().addLast(new SimpleChannelInboundHandler<HttpObject>() {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
-                        if (msg instanceof HttpContent) {
-                            HttpContent httpContent = (HttpContent) msg;
+                        if (msg instanceof FullHttpResponse) {
+                            FullHttpResponse response = (FullHttpResponse) msg;
+                            HttpResponseStatus status = response.getStatus();
+                            if (status.code() == 201) {
+                                // Created
+                                ByteBuf content = response.content();
+                                if (content != null && content.isReadable()) {
+                                    byte[] result = new byte[content.readableBytes()];
+                                    content.readBytes(result);
 
-                            ByteBuf content = httpContent.content();
-                            if (content.isReadable()) {
-                                byte[] result = new byte[content.readableBytes()];
-                                content.readBytes(result);
-
-                                // Put handler thread to process success archive log file.
-                                write(new WeedFSFile(result));
+                                    try {
+                                        handleQueue.put(WeedFSFile.create(result));
+                                    } catch (InterruptedException e) {
+                                        LOG.error("Exception", e);
+                                    }
+                                }
                             }
                         }
                     }
@@ -148,9 +163,11 @@ public class WeedFSClientService implements ChannelFutureListener {
         }, Constants.RECONNECT_WEED_DELAY, TimeUnit.SECONDS);
     }
 
-    public void write(WeedFSFile file) {
+    public void write(WeedFSFile file, WeedFSMeta meta) {
+        // Put meta of current file.
         try {
             writeQueue.put(file);
+            weedMetaMap.put(file.getKey(), meta);
         } catch (InterruptedException e) {
             LOG.error("Exception", e);
         }

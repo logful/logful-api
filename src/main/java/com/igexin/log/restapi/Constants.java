@@ -48,11 +48,6 @@ public class Constants {
     public static final String ERROR_DIR = "error";
 
     /**
-     * 已解密的日志文件目录.
-     */
-    public static final String DECRYPTED_DIR = "decrypted";
-
-    /**
      * 应用崩溃文件目录.
      */
     public static final String CRASH_REPORT_DIR = "crash";
@@ -61,11 +56,6 @@ public class Constants {
      * 日志文件处理临时文件目录.
      */
     public static final String LOG_FILE_TEMP_DIR = "temp";
-
-    /**
-     * 附件文件目录.
-     */
-    public static final String ATTACHMENT_DIR = "attachment";
 
     public static final String WEED_TEMP_DIR = "weed";
 
@@ -101,4 +91,6 @@ public class Constants {
     public static final int PLATFORM_IOS = 2;
 
     public static final int RECONNECT_WEED_DELAY = 10;
+
+    public static final String LOG_FILE_EXTENSION = "txt";
 }

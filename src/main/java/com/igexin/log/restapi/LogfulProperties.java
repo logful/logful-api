@@ -45,20 +45,12 @@ public class LogfulProperties {
         return path + "/" + Constants.ERROR_DIR + "/" + platform.toLowerCase();
     }
 
-    public String decryptedDir(String platform) {
-        return path + "/" + Constants.DECRYPTED_DIR + "/" + platform.toLowerCase();
-    }
-
     public String crashReportDir(String platform) {
         return path + "/" + Constants.CRASH_REPORT_DIR + "/" + platform.toLowerCase();
     }
 
     public String tempDir() {
         return path + "/" + Constants.LOG_FILE_TEMP_DIR;
-    }
-
-    public String attachmentDir() {
-        return path + "/" + Constants.ATTACHMENT_DIR;
     }
 
     public String weedDir() {

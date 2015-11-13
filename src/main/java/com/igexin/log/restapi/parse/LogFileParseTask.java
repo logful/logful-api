@@ -6,7 +6,7 @@ import com.igexin.log.restapi.util.CryptoTool;
 import com.igexin.log.restapi.util.GzipTool;
 import com.igexin.log.restapi.util.StringUtil;
 import com.igexin.log.restapi.weed.WeedFSClientService;
-import com.igexin.log.restapi.weed.WeedFSFile;
+import com.igexin.log.restapi.weed.WeedFSMeta;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +104,7 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
 
         String attachment = null;
         if (attachmentId != -1) {
-            attachment = StringUtil.attachmentName(platform, uid, appId, String.valueOf(attachmentId));
+            attachment = StringUtil.attachmentKey(platform, uid, appId, String.valueOf(attachmentId));
         }
         LogLine logLine = LogLine.create(platform, uid, appId,
                 name, layout, level, timestamp, tag, msg, alias,
@@ -119,32 +119,30 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
         for (SenderInterface object : senderList) {
             if (object instanceof LocalFileSender) {
                 LocalFileSender sender = (LocalFileSender) object;
-                sender.release();
-                String filename = sender.getFilename();
-                if (!StringUtil.isEmpty(filename)) {
-                    if (successful && !decryptFailed.get()) {
-                        // Close file.
-                        File srcFile = new File(properties.tempPath() + "/" + filename);
-                        File destDir = new File(properties.weedPath());
+                try {
+                    sender.release();
+                    LogFileProperties properties = sender.getProperties();
+                    if (properties != null) {
+                        if (successful && !decryptFailed.get()) {
+                            WeedFSMeta weedFSMeta = properties.createWeedFSMeta();
+                            if (weedFSMeta != null) {
+                                weedService.write(properties.createWeedFSFile(), weedFSMeta);
+                            }
+                        } else {
+                            // Decrypt log file failed.
+                            File destDir = new File(properties.errorPath());
+                            try {
+                                FileUtils.moveFileToDirectory(new File(inFilePath), destDir, true);
+                            } catch (IOException e) {
+                                LOG.error("Exception", e);
+                            }
 
-                        try {
-                            // Move decrypt log file to weed dir.
-                            FileUtils.moveFileToDirectory(srcFile, destDir, true);
-
-                            // Write file to weed fs.
-                            weedService.write(new WeedFSFile(filename));
-                        } catch (IOException e) {
-                            LOG.error("Exception", e);
-                        }
-                    } else {
-                        // Decrypt failed.
-                        File destDir = new File(properties.errorPath());
-                        try {
-                            FileUtils.moveFileToDirectory(new File(inFilePath), destDir, true);
-                        } catch (IOException e) {
-                            LOG.error("Exception", e);
+                            // Delete decrypt failed failed.
+                            FileUtils.deleteQuietly(new File(properties.outFilePath()));
                         }
                     }
+                } catch (Exception e) {
+                    LOG.error("Exception", e);
                 }
             }
         }

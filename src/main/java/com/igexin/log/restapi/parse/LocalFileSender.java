@@ -1,7 +1,6 @@
 package com.igexin.log.restapi.parse;
 
 import com.igexin.log.restapi.entity.LogLine;
-import com.igexin.log.restapi.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,10 +12,15 @@ public class LocalFileSender implements SenderInterface {
 
     private OutputStream outputStream;
 
-    private String filename;
+    private LogFileProperties properties;
+
+    public LogFileProperties getProperties() {
+        return properties;
+    }
 
     public static LocalFileSender create(final LogFileProperties properties) {
         LocalFileSender localFileSender = new LocalFileSender();
+        localFileSender.properties = properties;
         OutputStream outputStream = localFileSender.createOutputStream(properties);
         if (outputStream != null) {
             localFileSender.setOutputStream(outputStream);
@@ -39,21 +43,14 @@ public class LocalFileSender implements SenderInterface {
     }
 
     private OutputStream createOutputStream(LogFileProperties properties) {
-        File tempDir = new File(properties.tempPath());
-        if (!tempDir.exists()) {
-            if (!tempDir.mkdirs()) {
+        File weedDir = new File(properties.weedPath());
+        if (!weedDir.exists()) {
+            if (!weedDir.mkdirs()) {
                 return null;
             }
         }
-
-        filename = properties.outputFilename();
-        if (StringUtil.isEmpty(filename)) {
-            return null;
-        }
-
-        String filePath = properties.tempPath() + "/" + filename;
         try {
-            return new FileOutputStream(filePath, true);
+            return new FileOutputStream(properties.outFilePath(), true);
         } catch (FileNotFoundException e) {
             LOG.error("Exception", e);
         }
@@ -88,19 +85,11 @@ public class LocalFileSender implements SenderInterface {
     }
 
     @Override
-    public void release() {
+    public void release() throws Exception {
         if (outputStream != null) {
-            try {
-                outputStream.flush();
-                outputStream.close();
-            } catch (IOException e) {
-                LOG.error("Exception", e);
-            }
+            outputStream.flush();
+            outputStream.close();
         }
-    }
-
-    public String getFilename() {
-        return filename;
     }
 
 }

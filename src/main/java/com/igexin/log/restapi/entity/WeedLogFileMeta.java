@@ -3,7 +3,7 @@ package com.igexin.log.restapi.entity;
 import com.igexin.log.restapi.util.StringUtil;
 import org.springframework.data.annotation.Id;
 
-public class FileMeta {
+public class WeedLogFileMeta {
 
     @Id
     private String id;
@@ -26,16 +26,14 @@ public class FileMeta {
 
     private long size;
 
-    public static FileMeta create(short platform,
-                                  String uid,
-                                  String appId,
-                                  String loggerName,
-                                  String date,
-                                  short level,
-                                  int fragment,
-                                  String fid,
-                                  long size) {
-        FileMeta meta = new FileMeta();
+    public static WeedLogFileMeta create(short platform,
+                                         String uid,
+                                         String appId,
+                                         String loggerName,
+                                         String date,
+                                         short level,
+                                         int fragment) {
+        WeedLogFileMeta meta = new WeedLogFileMeta();
         meta.setPlatform(platform);
         meta.setUid(uid);
         meta.setAppId(appId);
@@ -43,8 +41,6 @@ public class FileMeta {
         meta.setDate(date);
         meta.setLevel(level);
         meta.setFragment(fragment);
-        meta.setFid(fid);
-        meta.setSize(size);
         return meta;
     }
 

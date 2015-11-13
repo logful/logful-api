@@ -4,6 +4,7 @@ import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
 import com.igexin.log.restapi.entity.UserInfo;
+import com.igexin.log.restapi.entity.WeedAttachFileMeta;
 import com.igexin.log.restapi.mongod.MongoConfigRepository;
 import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
 import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
@@ -15,6 +16,9 @@ import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import com.igexin.log.restapi.util.VersionUtil;
 import com.igexin.log.restapi.weed.WeedFSClientService;
+import com.igexin.log.restapi.weed.WeedFSFile;
+import com.igexin.log.restapi.weed.WeedFSMeta;
+import org.apache.commons.io.FilenameUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -449,17 +453,17 @@ public class LogRestController {
                                       String fileSum,
                                       String attachmentId,
                                       MultipartFile attachmentFile) {
-        String filename = StringUtil.attachmentName(platform, uid, appId, attachmentId);
-        if (filename.length() > 0) {
-            File dir = new File(logfulProperties.attachmentDir());
+        String key = StringUtil.attachmentKey(platform, uid, appId, attachmentId);
+        String extension = FilenameUtils.getExtension(attachmentFile.getOriginalFilename());
+        if (!StringUtil.isEmpty(key) && !StringUtil.isEmpty(extension)) {
+            File dir = new File(logfulProperties.weedDir());
             if (!dir.exists()) {
                 if (!dir.mkdirs()) {
                     throw new ServerException();
                 }
             }
-            String filePath = logfulProperties.attachmentDir() + "/" + filename + ".jpg";
+            String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
             File file = new File(filePath);
-
             try {
                 attachmentFile.transferTo(file);
                 // Check uploaded file sum
@@ -467,9 +471,16 @@ public class LogRestController {
                 if (!fileSumString.equalsIgnoreCase(fileSum)) {
                     throw new ServerException();
                 }
+
+                // Write attachment file to weed fs.
+                WeedFSFile weedFSFile = WeedFSFile.create(key, extension);
+                WeedAttachFileMeta weedAttachFileMeta = WeedAttachFileMeta.create(key, System.currentTimeMillis());
+                weedFSClientService.write(weedFSFile, WeedFSMeta.createAttachFileMeta(weedAttachFileMeta));
             } catch (IOException e) {
                 throw new ServerException();
             }
+        } else {
+            throw new BadRequestException();
         }
 
         return responseJson(0, "");

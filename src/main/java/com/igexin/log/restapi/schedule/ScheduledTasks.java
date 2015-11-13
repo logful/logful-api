@@ -71,6 +71,7 @@ public class ScheduledTasks {
      * Clear expired attachment file.
      */
     private void clearAttachmentDir() {
+        /*
         String dirPath = logfulProperties.attachmentDir();
         File dir = new File(dirPath);
         List<String> deletePaths = new ArrayList<>();
@@ -90,6 +91,7 @@ public class ScheduledTasks {
         if (size > 0) {
             threadPoolTaskExecutor.submit(new DeleteFileTask(deletePaths.toArray(new String[size])));
         }
+        */
     }
 
     private long diffDays(long time) {

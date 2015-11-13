@@ -6,6 +6,6 @@ public interface SenderInterface {
 
     void send(LogLine logLine);
 
-    void release();
+    void release() throws Exception;
 
 }

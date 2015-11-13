@@ -85,25 +85,7 @@ public class StringUtil {
         return "unknown";
     }
 
-    public static String logFileName(String platform, String uid, String appId, String originalFileName) {
-        int index = originalFileName.indexOf(".");
-        String[] temp = originalFileName.substring(0, index).split("-");
-        if (temp.length != 4) {
-            return null;
-        }
-        String[] array = new String[]{
-                String.valueOf(StringUtil.platformNumber(platform)),
-                uid,
-                appId,
-                temp[0],
-                temp[1],
-                String.valueOf(StringUtil.level(temp[2])),
-                temp[3]
-        };
-        return StringUtils.join(array, "-");
-    }
-
-    public static String attachmentName(String platform, String uid, String appId, String attachmentId) {
+    public static String attachmentKey(String platform, String uid, String appId, String attachmentId) {
         String temp = String.format("%s-%s-%s-%s",
                 platform.toLowerCase(),
                 uid.toLowerCase(),
@@ -111,7 +93,6 @@ public class StringUtil {
                 attachmentId);
         return Checksum.md5(temp);
     }
-
 
     public static boolean decryptError(String message) {
         return isEmpty(message) || StringUtils.equals(message, Constants.CRYPTO_ERROR);

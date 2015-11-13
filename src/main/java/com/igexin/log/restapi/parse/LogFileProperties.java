@@ -1,13 +1,18 @@
 package com.igexin.log.restapi.parse;
 
 import com.igexin.log.restapi.Constants;
+import com.igexin.log.restapi.entity.WeedLogFileMeta;
 import com.igexin.log.restapi.util.StringUtil;
+import com.igexin.log.restapi.weed.WeedFSFile;
+import com.igexin.log.restapi.weed.WeedFSMeta;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LogFileProperties {
+
+    private final ConcurrentHashMap<Integer, String> layoutMap = new ConcurrentHashMap<>();
 
     private String platform;
 
@@ -29,7 +34,30 @@ public class LogFileProperties {
 
     private String originalFilename;
 
-    private final ConcurrentHashMap<Integer, String> layoutMap = new ConcurrentHashMap<>();
+    private String key;
+
+    private String extension;
+
+    public LogFileProperties() {
+        this.key = StringUtil.randomUid();
+        this.extension = Constants.LOG_FILE_EXTENSION;
+    }
+
+    public String getExtension() {
+        return extension;
+    }
+
+    public void setExtension(String extension) {
+        this.extension = extension;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
 
     public String getUid() {
         return uid;
@@ -59,14 +87,6 @@ public class LogFileProperties {
         return layouts;
     }
 
-    public String getAlias() {
-        return alias;
-    }
-
-    public void setAlias(String alias) {
-        this.alias = alias;
-    }
-
     public void setLayouts(String layouts) {
         this.layouts = layouts;
 
@@ -77,6 +97,14 @@ public class LogFileProperties {
             JSONObject jsonObject = jsonArray.getJSONObject(i);
             layoutMap.put(jsonObject.optInt("id"), jsonObject.optString("layout"));
         }
+    }
+
+    public String getAlias() {
+        return alias;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
     }
 
     public String getLayout(short layoutId) {
@@ -136,7 +164,28 @@ public class LogFileProperties {
         return workPath + "/" + Constants.ERROR_DIR + "/" + platform.toLowerCase();
     }
 
-    public String outputFilename() {
-        return StringUtil.logFileName(getPlatform(), getUid(), getAppId(), getOriginalFilename());
+    public String outFilePath() {
+        return workPath + "/" + Constants.WEED_TEMP_DIR + "/" + key + "." + extension;
+    }
+
+    public WeedFSFile createWeedFSFile() {
+        return WeedFSFile.create(key, extension);
+    }
+
+    public WeedFSMeta createWeedFSMeta() {
+        int index = originalFilename.indexOf(".");
+        String[] temp = originalFilename.substring(0, index).split("-");
+        if (temp.length != 4) {
+            return null;
+        }
+        String date = temp[1];
+        try {
+            int fragment = Integer.parseInt(temp[3]);
+            WeedLogFileMeta logFileMeta = WeedLogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
+                    appId, loggerName, date, (short) level, fragment);
+            return WeedFSMeta.createLogFileMeta(logFileMeta);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

@@ -4,12 +4,12 @@ import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.Config;
 import com.igexin.log.restapi.entity.ControlProfile;
-import com.igexin.log.restapi.entity.FileMeta;
 import com.igexin.log.restapi.entity.UserInfo;
+import com.igexin.log.restapi.entity.WeedLogFileMeta;
 import com.igexin.log.restapi.mongod.MongoConfigRepository;
 import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
-import com.igexin.log.restapi.mongod.MongoFileMetaRepository;
 import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
+import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
 import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LocalFileSender;
 import com.igexin.log.restapi.parse.LogFileParser;
@@ -51,7 +51,7 @@ public class WebRestController {
     private MongoControlProfileRepository mongoControlProfileRepository;
 
     @Autowired
-    private MongoFileMetaRepository mongoFileMetaRepository;
+    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
 
     @Autowired
     GraylogClientService graylogClientService;
@@ -162,7 +162,11 @@ public class WebRestController {
                 if (!successful) {
                     throw new ServerException();
                 }
-                fileSender.release();
+                try {
+                    fileSender.release();
+                } catch (Exception e) {
+                    throw new ServerException();
+                }
             }
         });
         parser.parse(file.getAbsolutePath());
@@ -241,10 +245,10 @@ public class WebRestController {
             criteria.and("appId").is(appId);
             criteria.and("date").is(date);
 
-            List<FileMeta> fileMetaList = mongoFileMetaRepository.findAllByCriteria(criteria);
+            List<WeedLogFileMeta> fileMetaList = mongoWeedLogFileMetaRepository.findAllByCriteria(criteria);
 
             JSONArray fileMetaArray = new JSONArray();
-            for (FileMeta fileMeta : fileMetaList) {
+            for (WeedLogFileMeta fileMeta : fileMetaList) {
                 JSONObject fileMetaObject = new JSONObject();
 
                 fileMetaObject.put("filename", fileMeta.originalFilename());
@@ -450,6 +454,7 @@ public class WebRestController {
     @RequestMapping(value = "/web/util/attachment/download/{uri}",
             method = RequestMethod.GET)
     public ResponseEntity<InputStreamResource> downloadAttachment(@PathVariable String uri) {
+        /*
         if (StringUtil.isEmpty(uri)) {
             throw new BadRequestException();
         }
@@ -471,6 +476,9 @@ public class WebRestController {
         } else {
             throw new ResourceNotFoundException();
         }
+        */
+        // TODO
+        return null;
     }
 
     @RequestMapping(value = "/web/control/profile/edit",

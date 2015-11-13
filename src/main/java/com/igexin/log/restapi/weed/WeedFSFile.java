@@ -4,24 +4,43 @@ import org.json.JSONObject;
 
 public class WeedFSFile {
 
-    private String filename;
+    private String key;
+
+    private String extension;
 
     private byte[] response;
 
-    public WeedFSFile(byte[] response) {
-        this.response = response;
+    public static WeedFSFile create(byte[] response) {
+        WeedFSFile weedFSFile = new WeedFSFile();
+        weedFSFile.response = response;
+        return weedFSFile;
     }
 
-    public WeedFSFile(String filename) {
-        this.filename = filename;
+    public static WeedFSFile create(String key, String extension) {
+        WeedFSFile weedFSFile = new WeedFSFile();
+        weedFSFile.key = key;
+        weedFSFile.extension = extension;
+        return weedFSFile;
     }
 
-    public String getFilename() {
-        return filename;
+    public String getExtension() {
+        return extension;
     }
 
-    public void setFilename(String filename) {
-        this.filename = filename;
+    public void setExtension(String extension) {
+        this.extension = extension;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public String filename() {
+        return key + "." + extension;
     }
 
     public JSONObject responseObject() {

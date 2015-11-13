@@ -11,7 +11,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -57,41 +56,40 @@ public class WeedFSWriterThread {
                         if (weedFSFile == null) {
                             weedFSFile = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
-
-                        if (weedFSFile != null) {
-                            if (channel != null && channel.isActive() && uri != null && !StringUtil.isEmpty(dirPath)) {
-                                String filePath = dirPath + "/" + weedFSFile.getFilename();
+                        if (weedFSFile != null && channel != null && channel.isActive()
+                                && uri != null && !StringUtil.isEmpty(dirPath)) {
+                            try {
+                                String filePath = dirPath + "/" + weedFSFile.filename();
                                 File file = new File(filePath);
-                                try {
-                                    String boundary = UUID.randomUUID().toString();
-                                    String start = "--" + boundary + "\r\n"
-                                            + "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n"
-                                            + "Content-Type: text/plain" + "\r\n"
-                                            + "\r\n";
-                                    String end = "\r\n" + "--" + boundary + "--\r\n";
+                                String boundary = UUID.randomUUID().toString();
+                                String start = "--" + boundary + "\r\n"
+                                        + "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n"
+                                        + "\r\n";
+                                String end = "\r\n" + "--" + boundary + "--\r\n";
 
-                                    ByteBuf buffer = Unpooled.wrappedBuffer(start.getBytes(), FileUtils.readFileToByteArray(file), end.getBytes());
-                                    DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                                            HttpMethod.POST,
-                                            uri.toASCIIString(),
-                                            buffer);
+                                ByteBuf buffer = Unpooled.wrappedBuffer(start.getBytes(),
+                                        FileUtils.readFileToByteArray(file),
+                                        end.getBytes());
 
-                                    HttpHeaders headers = request.headers();
-                                    headers.set("Connection", "keep-alive");
-                                    headers.set("Content-Type", "multipart/form-data; boundary=" + boundary);
-                                    headers.set("Content-Length", request.content().readableBytes());
+                                DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                        HttpMethod.POST,
+                                        uri.toASCIIString(),
+                                        buffer);
 
-                                    channel.writeAndFlush(request);
+                                HttpHeaders headers = request.headers();
+                                headers.set("Connection", "keep-alive");
+                                headers.set("Content-Type", "multipart/form-data; boundary=" + boundary);
+                                headers.set("Content-Length", request.content().readableBytes());
 
-                                    Thread.sleep(100);
-                                } catch (IOException e) {
-                                    // Ignore Exception.
-                                }
+                                channel.writeAndFlush(request);
+                            } catch (Exception e) {
+                                // Ignore any exception.
+                            } finally {
+                                weedFSFile = null;
                             }
-                            weedFSFile = null;
                         }
                     } catch (InterruptedException e) {
-                        // Ignore Exception.
+                        // Ignore exception.
                     }
                     lock.unlock();
                 }

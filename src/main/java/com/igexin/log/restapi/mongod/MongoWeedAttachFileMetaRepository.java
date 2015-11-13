@@ -1,6 +1,6 @@
 package com.igexin.log.restapi.mongod;
 
-import com.igexin.log.restapi.entity.FileMeta;
+import com.igexin.log.restapi.entity.WeedAttachFileMeta;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -9,25 +9,24 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-// TODO
 @Repository
-public class MongoFileMetaRepository {
+public class MongoWeedAttachFileMetaRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoFileMetaRepository(MongoOperations operations) {
+    public MongoWeedAttachFileMetaRepository(MongoOperations operations) {
         this.operations = operations;
     }
 
-    public FileMeta save(FileMeta fileMeta) {
+    public WeedAttachFileMeta save(WeedAttachFileMeta fileMeta) {
         operations.save(fileMeta);
         return fileMeta;
     }
 
-    public List<FileMeta> findAllByCriteria(Criteria criteria) {
+    public List<WeedAttachFileMeta> findAllByCriteria(Criteria criteria) {
         Query query = new Query(criteria);
-        return operations.find(query, FileMeta.class);
+        return operations.find(query, WeedAttachFileMeta.class);
     }
 
 }

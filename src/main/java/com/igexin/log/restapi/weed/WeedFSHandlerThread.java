@@ -1,13 +1,17 @@
 package com.igexin.log.restapi.weed;
 
-import com.igexin.log.restapi.entity.FileMeta;
-import com.igexin.log.restapi.mongod.MongoFileMetaRepository;
+import com.igexin.log.restapi.entity.WeedAttachFileMeta;
+import com.igexin.log.restapi.entity.WeedLogFileMeta;
+import com.igexin.log.restapi.mongod.MongoWeedAttachFileMetaRepository;
+import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
 import com.igexin.log.restapi.util.StringUtil;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -20,7 +24,11 @@ public class WeedFSHandlerThread {
 
     private final Thread handlerThread;
 
-    public WeedFSHandlerThread(final String dirPath, final MongoFileMetaRepository repository, final BlockingQueue<WeedFSFile> queue) {
+    public WeedFSHandlerThread(final String dirPath,
+                               final MongoWeedLogFileMetaRepository logRepository,
+                               final MongoWeedAttachFileMetaRepository attachRepository,
+                               final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap,
+                               final BlockingQueue<WeedFSFile> queue) {
         this.lock = new ReentrantLock();
 
         Runnable runnable = new Runnable() {
@@ -35,39 +43,55 @@ public class WeedFSHandlerThread {
                         if (weedFSFile == null) {
                             weedFSFile = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
-
                         if (weedFSFile != null && !StringUtil.isEmpty(dirPath)) {
-                            JSONObject object = weedFSFile.responseObject();
-                            if (object != null) {
-                                boolean success = object.has("fid") && object.has("fileName")
-                                        && object.has("size") && object.has("fileUrl");
-                                if (success) {
-                                    String fid = object.optString("fid");
-                                    String filename = object.optString("fileName");
-                                    long size = object.optLong("size");
+                            try {
+                                JSONObject object = weedFSFile.responseObject();
+                                if (object != null) {
+                                    boolean success = object.has("fid") && object.has("fileName")
+                                            && object.has("size") && object.has("fileUrl");
+                                    if (success) {
+                                        String fid = object.optString("fid");
+                                        String filename = object.optString("fileName");
+                                        long size = object.optLong("size");
 
-                                    String[] temp1 = filename.split("-");
+                                        String key = FilenameUtils.getBaseName(filename);
+                                        WeedFSMeta meta = weedMetaMap.get(key);
+                                        if (meta != null) {
+                                            if (meta.getType() == WeedFSMeta.TYPE_LOG) {
+                                                // Log file.
+                                                WeedLogFileMeta logFileMeta = meta.getLogFileMeta();
+                                                if (logFileMeta != null) {
+                                                    logFileMeta.setFid(fid);
+                                                    logFileMeta.setSize(size);
 
-                                    FileMeta fileMeta = FileMeta.create(
-                                            Short.parseShort(temp1[0]),
-                                            temp1[1],
-                                            temp1[2],
-                                            temp1[3],
-                                            temp1[4],
-                                            Short.parseShort(temp1[5]),
-                                            Integer.parseInt(temp1[6]),
-                                            fid,
-                                            size
-                                    );
+                                                    // Save log file meta to db.
+                                                    logRepository.save(logFileMeta);
+                                                }
+                                            } else if (meta.getType() == WeedFSMeta.TYPE_ATTACHMENT) {
+                                                // Attachment file.
+                                                WeedAttachFileMeta attachFileMeta = meta.getAttachFileMeta();
+                                                if (attachFileMeta != null) {
+                                                    attachFileMeta.setFid(fid);
+                                                    attachFileMeta.setSize(size);
 
-                                    repository.save(fileMeta);
-                                    String filePath = dirPath + "/" + filename;
-                                    FileUtils.deleteQuietly(new File(filePath));
+                                                    // Save attachment file meta to db.
+                                                    attachRepository.save(attachFileMeta);
+                                                }
+                                            }
+                                            // Remove WeedFSMeta form map.
+                                            weedMetaMap.remove(key);
+                                        }
+                                        String filePath = dirPath + "/" + filename;
+                                        FileUtils.deleteQuietly(new File(filePath));
+                                    }
                                 }
+                            } catch (Exception e) {
+                                // Ignore all exception.
+                            } finally {
+                                weedFSFile = null;
                             }
-                            weedFSFile = null;
                         }
-                    } catch (Exception e) {
+                    } catch (InterruptedException e) {
                         // Ignore all exception.
                     }
                     lock.unlock();
@@ -79,7 +103,6 @@ public class WeedFSHandlerThread {
         handlerThread.setName("weed-fs-handler-" + handlerThread.getId());
         handlerThread.setDaemon(true);
     }
-
 
     public void start() {
         handlerThread.start();
