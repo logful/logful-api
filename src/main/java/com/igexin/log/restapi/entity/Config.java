@@ -1,7 +1,9 @@
 package com.igexin.log.restapi.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+@Document(collection = "config")
 public class Config {
 
     @Id

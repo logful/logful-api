@@ -4,114 +4,80 @@ import com.igexin.log.restapi.LogfulProperties;
 import com.igexin.log.restapi.entity.LogLine;
 import com.igexin.log.restapi.mongod.MongoLogLineRepository;
 import com.igexin.log.restapi.parse.GraylogClientService;
-import com.igexin.log.restapi.util.FileUtil;
 import com.igexin.log.restapi.weed.WeedFSClientService;
+import com.igexin.log.restapi.weed.WeedFSMeta;
+import com.igexin.log.restapi.weed.WeedQueueRepository;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ScheduledTasks {
 
-    private static final int PAGE_LIMIT = 5000;
-    private static final long DELETE_BEFORE_DAY = 7;
+    private static final int PAGE_LIMIT = 2048;
 
     @Autowired
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoLogLineRepository mongoDbLogLineRepository;
+    private MongoLogLineRepository mongoLogLineRepository;
 
     @Autowired
-    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    private WeedQueueRepository weedQueueRepository;
 
     @Autowired
-    WeedFSClientService weedFSClientService;
+    private WeedFSClientService weedFSClientService;
 
     @Autowired
-    GraylogClientService graylogClientService;
+    private GraylogClientService graylogClientService;
 
-    /**
-     * 重发发送到 GrayLog 失败的日志内容.
-     */
-    @Scheduled(cron = "*/10 * * * * *")
-    public void resendFailedLogLine() {
+    @Scheduled(cron = "*/600 * * * * *")
+    @Async
+    public void retryPutQueue() {
         if (graylogClientService.isConnected()) {
-            while (true) {
-                List<LogLine> logLineList = mongoDbLogLineRepository.findAllFailedLimit(PAGE_LIMIT);
-                if (logLineList == null || logLineList.size() == 0) {
-                    break;
-                }
-                for (LogLine logLine : logLineList) {
-                    if (logLine.getStatus() == LogLine.STATE_FAILED) {
-                        graylogClientService.send(logLine);
-                    }
-                }
+            List<LogLine> logLineList = mongoLogLineRepository.findAllNotSendLimit(PAGE_LIMIT);
+            for (LogLine logLine : logLineList) {
+                graylogClientService.send(logLine);
+            }
+        }
+
+        if (weedFSClientService.isConnected()) {
+            List<WeedFSMeta> weedFSMetaList = weedQueueRepository.findAllNotWriteLimit(PAGE_LIMIT);
+            for (WeedFSMeta weedFSMeta : weedFSMetaList) {
+                weedFSClientService.write(weedFSMeta);
             }
         }
     }
 
-    /**
-     * 删除过期日志文件、合并上传的解密日志文件.
-     */
-    @Scheduled(cron = "0 10 1 ? * *") // 每天凌晨 1:10 执行
-    //@Scheduled(cron = "0 0 */1 * * *") // 每一小时执行一次
-    //@Scheduled(cron = "*/10 * * * * *")
-    public void clearAndMergeFile() {
-        clearAttachmentDir();
-    }
-
-    /**
-     * Clear expired attachment file.
-     */
-    private void clearAttachmentDir() {
-        /*
-        String dirPath = logfulProperties.attachmentDir();
-        File dir = new File(dirPath);
-        List<String> deletePaths = new ArrayList<>();
-        if (dir.exists() && dir.isDirectory()) {
-            File[] files = dir.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    long days = diffDays(file.lastModified());
-                    if (days >= DELETE_BEFORE_DAY) {
-                        deletePaths.add(file.getAbsolutePath());
-                    }
-                }
+    //@Scheduled(cron = "0 10 1 ? * *") // 每天凌晨 1:10 执行
+    @Scheduled(cron = "0 0 */1 * * *") // 每一小时执行一次
+    @Async
+    public void clearSystem() {
+        String path = logfulProperties.weedDir();
+        ConcurrentHashMap<String, WeedFSMeta> map = weedFSClientService.getWeedMetaMap();
+        for (Map.Entry<String, WeedFSMeta> entry : map.entrySet()) {
+            File file = new File(path + "/" + entry.getKey() + "." + entry.getValue().getExtension());
+            if (!file.exists()) {
+                map.remove(entry.getKey());
             }
         }
 
-        int size = deletePaths.size();
-        if (size > 0) {
-            threadPoolTaskExecutor.submit(new DeleteFileTask(deletePaths.toArray(new String[size])));
-        }
-        */
-    }
-
-    private long diffDays(long time) {
-        Date today = new Date();
-        long diff = today.getTime() - time;
-        return diff / (24 * 60 * 60 * 1000);
-    }
-
-    private class DeleteFileTask implements Runnable {
-
-        private String[] filePaths;
-
-        public DeleteFileTask(String[] filePaths) {
-            this.filePaths = filePaths;
-        }
-
-        @Override
-        public void run() {
-            if (filePaths != null) {
-                FileUtil.delete(filePaths);
+        long ttl = logfulProperties.ttlSeconds() * 1000;
+        long current = System.currentTimeMillis();
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (current - file.lastModified() >= ttl) {
+                    FileUtils.deleteQuietly(file);
+                }
             }
         }
     }

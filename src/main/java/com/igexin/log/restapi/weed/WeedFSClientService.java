@@ -1,9 +1,13 @@
 package com.igexin.log.restapi.weed;
 
 import com.igexin.log.restapi.LogfulProperties;
+import com.igexin.log.restapi.entity.WeedAttachFileMeta;
+import com.igexin.log.restapi.entity.WeedLogFileMeta;
 import com.igexin.log.restapi.mongod.MongoWeedAttachFileMetaRepository;
 import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
 import com.igexin.log.restapi.util.StringUtil;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBCollection;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -15,6 +19,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -25,41 +30,61 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class WeedFSClientService implements ChannelFutureListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(WeedFSClientService.class);
 
-    @Autowired
-    LogfulProperties logfulProperties;
-
-    @Autowired
-    MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
-
-    @Autowired
-    MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+    private static Queue queue;
 
     private final EventLoopGroup workerGroup = new NioEventLoopGroup(0, new DefaultThreadFactory(getClass(), true));
 
     private final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap = new ConcurrentHashMap<>();
 
-    private static Queue queue;
+    @Autowired
+    private LogfulProperties logfulProperties;
 
-    private static class Queue {
+    @Autowired
+    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
 
-        public final BlockingQueue<WeedFSFile> writeQueue;
+    @Autowired
+    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
 
-        public final BlockingQueue<WeedFSFile> handleQueue;
+    @Autowired
+    private WeedQueueRepository weedQueueRepository;
 
-        public Queue(LogfulProperties properties) {
-            this.writeQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
-            this.handleQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
-        }
+    private AtomicBoolean connected = new AtomicBoolean(false);
+
+    public ConcurrentHashMap<String, WeedFSMeta> getWeedMetaMap() {
+        return weedMetaMap;
+    }
+
+    public boolean isConnected() {
+        return connected.get();
     }
 
     @PostConstruct
     public void create() {
+        MongoOperations operations = mongoWeedLogFileMetaRepository.getOperations();
+        try {
+            DBCollection collection;
+
+            BasicDBObject index = new BasicDBObject("writeDate", 1);
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.ttlSeconds());
+
+            collection = operations.getCollection(operations.getCollectionName(WeedLogFileMeta.class));
+            collection.createIndex(index, options);
+
+            collection = operations.getCollection(operations.getCollectionName(WeedAttachFileMeta.class));
+            collection.createIndex(index, options);
+
+            collection = operations.getCollection(operations.getCollectionName(WeedFSMeta.class));
+            collection.createIndex(index, options);
+        } catch (Exception e) {
+            LOG.error("Exception", e);
+        }
         queue = new Queue(logfulProperties);
         createBootstrap(workerGroup);
     }
@@ -102,12 +127,13 @@ public class WeedFSClientService implements ChannelFutureListener {
         }
 
         String weedDir = logfulProperties.weedDir();
-        final WeedFSWriterThread weedFSWriterThread = new WeedFSWriterThread(uri, weedDir, queue.writeQueue);
-        final WeedFSHandlerThread weedFSHandlerThread = new WeedFSHandlerThread(weedDir,
+        final WeedFSWriteThread writeThread = new WeedFSWriteThread(uri, weedDir, weedQueueRepository, queue.writeQueue);
+        final WeedFSReadThread readThread = new WeedFSReadThread(weedDir,
                 mongoWeedLogFileMetaRepository,
                 mongoWeedAttachFileMetaRepository,
+                weedQueueRepository,
                 weedMetaMap,
-                queue.handleQueue);
+                queue.readQueue);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(final SocketChannel channel) throws Exception {
@@ -126,9 +152,8 @@ public class WeedFSClientService implements ChannelFutureListener {
                                 if (content != null && content.isReadable()) {
                                     byte[] result = new byte[content.readableBytes()];
                                     content.readBytes(result);
-
                                     try {
-                                        queue.handleQueue.put(WeedFSFile.create(result));
+                                        queue.readQueue.put(WeedFSMeta.create(result));
                                     } catch (InterruptedException e) {
                                         LOG.error("Exception", e);
                                     }
@@ -139,16 +164,20 @@ public class WeedFSClientService implements ChannelFutureListener {
 
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                        weedFSWriterThread.start(ctx.channel());
-                        weedFSHandlerThread.start();
+                        connected.set(true);
+
+                        writeThread.start(ctx.channel());
+                        readThread.start();
 
                         LOG.info("Weed fs socket channel connected!");
                     }
 
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                        weedFSWriterThread.stop();
-                        weedFSHandlerThread.stop();
+                        connected.set(false);
+
+                        writeThread.stop();
+                        readThread.stop();
 
                         reconnect(ctx.channel().eventLoop());
                         LOG.info("Will reconnect weed fs!");
@@ -174,13 +203,28 @@ public class WeedFSClientService implements ChannelFutureListener {
         }, logfulProperties.getWeed().getReconnectDelay(), TimeUnit.MILLISECONDS);
     }
 
-    public void write(WeedFSFile file, WeedFSMeta meta) {
-        // Put meta of current file.
-        try {
-            queue.writeQueue.put(file);
-            weedMetaMap.put(file.getKey(), meta);
-        } catch (InterruptedException e) {
-            LOG.error("Exception", e);
+    public void write(WeedFSMeta meta) {
+        if (connected.get()) {
+            try {
+                queue.writeQueue.put(meta);
+                weedMetaMap.put(meta.getKey(), meta);
+            } catch (InterruptedException e) {
+                LOG.error("Exception", e);
+            }
+        } else {
+            weedQueueRepository.save(meta);
+        }
+    }
+
+    private static class Queue {
+
+        public final BlockingQueue<WeedFSMeta> writeQueue;
+
+        public final BlockingQueue<WeedFSMeta> readQueue;
+
+        public Queue(LogfulProperties properties) {
+            this.writeQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
+            this.readQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
         }
     }
 }

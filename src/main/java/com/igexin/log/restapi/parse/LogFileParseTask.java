@@ -124,9 +124,9 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
                     LogFileProperties properties = sender.getProperties();
                     if (properties != null) {
                         if (successful && !decryptFailed.get()) {
-                            WeedFSMeta weedFSMeta = properties.createWeedFSMeta();
-                            if (weedFSMeta != null) {
-                                weedService.write(properties.createWeedFSFile(), weedFSMeta);
+                            WeedFSMeta meta = properties.create();
+                            if (meta != null) {
+                                weedService.write(meta);
                             }
                         } else {
                             // Decrypt log file failed.

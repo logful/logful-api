@@ -2,14 +2,8 @@ package com.igexin.log.restapi.controller;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
-import com.igexin.log.restapi.entity.Config;
-import com.igexin.log.restapi.entity.ControlProfile;
-import com.igexin.log.restapi.entity.UserInfo;
-import com.igexin.log.restapi.entity.WeedLogFileMeta;
-import com.igexin.log.restapi.mongod.MongoConfigRepository;
-import com.igexin.log.restapi.mongod.MongoControlProfileRepository;
-import com.igexin.log.restapi.mongod.MongoUserInfoRepository;
-import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
+import com.igexin.log.restapi.entity.*;
+import com.igexin.log.restapi.mongod.*;
 import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LocalFileSender;
 import com.igexin.log.restapi.parse.LogFileParser;
@@ -17,6 +11,7 @@ import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.CryptoTool;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
+import com.igexin.log.restapi.weed.WeedFSClientService;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -54,7 +49,13 @@ public class WebRestController {
     private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
 
     @Autowired
-    GraylogClientService graylogClientService;
+    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+
+    @Autowired
+    private GraylogClientService graylogClientService;
+
+    @Autowired
+    private WeedFSClientService weedFSClientService;
 
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
@@ -73,8 +74,9 @@ public class WebRestController {
     public String status() {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("status", 0);
-        jsonObject.put("version", "1.0.0");
+        jsonObject.put("version", "0.2.0");
         jsonObject.put("graylog_connected", graylogClientService.isConnected());
+        jsonObject.put("weed_fs_connected", weedFSClientService.isConnected());
         return jsonObject.toString();
     }
 
@@ -446,39 +448,26 @@ public class WebRestController {
     }
 
     /**
-     * Download attachment file.
+     * Get attachment meta by id.
      *
-     * @param uri Attachment uri
+     * @param id Attachment id.
      * @return Attachment resource
      */
-    @RequestMapping(value = "/web/util/attachment/download/{uri}",
+    @RequestMapping(value = "/web/util/attachment/{id}",
             method = RequestMethod.GET)
-    public ResponseEntity<InputStreamResource> downloadAttachment(@PathVariable String uri) {
-        /*
-        if (StringUtil.isEmpty(uri)) {
-            throw new BadRequestException();
-        }
-        String filename = uri + ".jpg";
-        File file = new File(logfulProperties.attachmentDir() + "/" + filename);
-        if (file.exists() || file.isFile()) {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.IMAGE_JPEG);
-            headers.setContentLength(file.length());
-            headers.setContentDispositionFormData("attachment", filename);
-
-            InputStreamResource inputStreamResource;
-            try {
-                inputStreamResource = new InputStreamResource(new FileInputStream(file));
-                return new ResponseEntity<>(inputStreamResource, headers, HttpStatus.OK);
-            } catch (FileNotFoundException e) {
-                throw new ResourceNotFoundException();
-            }
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public String getFidByAttachmentId(@PathVariable String id) {
+        Criteria criteria = Criteria.where("attachmentId").is(id);
+        WeedAttachFileMeta meta = mongoWeedAttachFileMetaRepository.findOneByCriteria(criteria);
+        if (meta != null) {
+            JSONObject object = new JSONObject();
+            object.put("fid", meta.getFid());
+            object.put("size", meta.getSize());
+            return object.toString();
         } else {
             throw new ResourceNotFoundException();
         }
-        */
-        // TODO
-        return null;
     }
 
     @RequestMapping(value = "/web/control/profile/edit",

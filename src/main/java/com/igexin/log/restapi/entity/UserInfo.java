@@ -5,10 +5,12 @@ import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.web.context.request.WebRequest;
 
 import java.util.zip.CRC32;
 
+@Document(collection = "user_info")
 public class UserInfo {
 
     @Id

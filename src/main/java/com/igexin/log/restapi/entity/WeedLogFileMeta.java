@@ -2,7 +2,11 @@ package com.igexin.log.restapi.entity;
 
 import com.igexin.log.restapi.util.StringUtil;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
+@Document(collection = "weed_log_file_meta")
 public class WeedLogFileMeta {
 
     @Id
@@ -26,6 +30,8 @@ public class WeedLogFileMeta {
 
     private long size;
 
+    private Date writeDate;
+
     public static WeedLogFileMeta create(short platform,
                                          String uid,
                                          String appId,
@@ -41,7 +47,16 @@ public class WeedLogFileMeta {
         meta.setDate(date);
         meta.setLevel(level);
         meta.setFragment(fragment);
+        meta.setWriteDate(new Date());
         return meta;
+    }
+
+    public Date getWriteDate() {
+        return writeDate;
+    }
+
+    public void setWriteDate(Date writeDate) {
+        this.writeDate = writeDate;
     }
 
     public String getDate() {

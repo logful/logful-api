@@ -24,6 +24,11 @@ public class MongoWeedAttachFileMetaRepository {
         return fileMeta;
     }
 
+    public WeedAttachFileMeta findOneByCriteria(Criteria criteria) {
+        Query query = new Query(criteria).limit(1);
+        return operations.findOne(query, WeedAttachFileMeta.class);
+    }
+
     public List<WeedAttachFileMeta> findAllByCriteria(Criteria criteria) {
         Query query = new Query(criteria);
         return operations.find(query, WeedAttachFileMeta.class);

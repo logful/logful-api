@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class WeedFSWriterThread {
+public class WeedFSWriteThread {
 
     private final ReentrantLock lock;
 
@@ -31,14 +31,17 @@ public class WeedFSWriterThread {
 
     private Channel channel;
 
-    public WeedFSWriterThread(final URI uri, final String dirPath, final BlockingQueue<WeedFSFile> queue) {
+    public WeedFSWriteThread(final URI uri,
+                             final String dirPath,
+                             final WeedQueueRepository queueRepository,
+                             final BlockingQueue<WeedFSMeta> queue) {
         this.lock = new ReentrantLock();
         this.connectedCond = lock.newCondition();
 
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                WeedFSFile weedFSFile = null;
+                WeedFSMeta weedFSMeta = null;
 
                 while (running.get()) {
                     lock.lock();
@@ -53,39 +56,46 @@ public class WeedFSWriterThread {
                     }
 
                     try {
-                        if (weedFSFile == null) {
-                            weedFSFile = queue.poll(100, TimeUnit.MILLISECONDS);
+                        if (weedFSMeta == null) {
+                            weedFSMeta = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
-                        if (weedFSFile != null && channel != null && channel.isActive()
+                        if (weedFSMeta != null && channel != null && channel.isActive()
                                 && uri != null && !StringUtil.isEmpty(dirPath)) {
                             try {
-                                String filePath = dirPath + "/" + weedFSFile.filename();
+                                String filePath = dirPath + "/" + weedFSMeta.filename();
                                 File file = new File(filePath);
-                                String boundary = UUID.randomUUID().toString();
-                                String start = "--" + boundary + "\r\n"
-                                        + "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n"
-                                        + "\r\n";
-                                String end = "\r\n" + "--" + boundary + "--\r\n";
+                                if (file.exists()) {
+                                    String boundary = UUID.randomUUID().toString();
+                                    String start = "--" + boundary + "\r\n"
+                                            + "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n"
+                                            + "\r\n";
+                                    String end = "\r\n" + "--" + boundary + "--\r\n";
 
-                                ByteBuf buffer = Unpooled.wrappedBuffer(start.getBytes(),
-                                        FileUtils.readFileToByteArray(file),
-                                        end.getBytes());
+                                    ByteBuf buffer = Unpooled.wrappedBuffer(start.getBytes(),
+                                            FileUtils.readFileToByteArray(file),
+                                            end.getBytes());
 
-                                DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
-                                        HttpMethod.POST,
-                                        uri.toASCIIString(),
-                                        buffer);
+                                    DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
+                                            HttpMethod.POST,
+                                            uri.toASCIIString(),
+                                            buffer);
 
-                                HttpHeaders headers = request.headers();
-                                headers.set("Connection", "keep-alive");
-                                headers.set("Content-Type", "multipart/form-data; boundary=" + boundary);
-                                headers.set("Content-Length", request.content().readableBytes());
+                                    HttpHeaders headers = request.headers();
+                                    headers.set("Connection", "keep-alive");
+                                    headers.set("Content-Type", "multipart/form-data; boundary=" + boundary);
+                                    headers.set("Content-Length", request.content().readableBytes());
 
-                                channel.writeAndFlush(request);
+                                    channel.writeAndFlush(request);
+                                } else {
+                                    if (!StringUtil.isEmpty(weedFSMeta.getId())) {
+                                        weedFSMeta.setStatus(WeedFSMeta.STATE_DELETED);
+                                        queueRepository.save(weedFSMeta);
+                                    }
+                                }
                             } catch (Exception e) {
                                 // Ignore any exception.
                             } finally {
-                                weedFSFile = null;
+                                weedFSMeta = null;
                             }
                         }
                     } catch (InterruptedException e) {

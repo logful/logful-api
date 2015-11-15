@@ -8,11 +8,14 @@ import com.igexin.log.restapi.entity.LayoutItem;
 import com.igexin.log.restapi.entity.LogLine;
 import com.igexin.log.restapi.mongod.MongoLogLineRepository;
 import com.igexin.log.restapi.util.StringUtil;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBCollection;
 import org.graylog2.gelfclient.*;
 import org.graylog2.gelfclient.transport.GelfTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -36,6 +39,17 @@ public class GraylogClientService implements SenderInterface {
 
     @PostConstruct
     public void create() {
+        MongoOperations operations = mongoLogLineRepository.getOperations();
+        try {
+            BasicDBObject index = new BasicDBObject("writeDate", 1);
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.ttlSeconds());
+
+            DBCollection collection = operations.getCollection(operations.getCollectionName(LogLine.class));
+            collection.createIndex(index, options);
+        } catch (Exception e) {
+            LOG.error("Exception", e);
+        }
+
         String host = logfulProperties.graylogHost();
         int port = logfulProperties.graylogPort();
 
@@ -77,7 +91,6 @@ public class GraylogClientService implements SenderInterface {
 
             @Override
             public void failed(LogLine logLine) {
-                logLine.setStatus(LogLine.STATE_FAILED);
                 mongoLogLineRepository.save(logLine);
             }
         });
@@ -94,13 +107,11 @@ public class GraylogClientService implements SenderInterface {
                 try {
                     write(message);
                 } catch (InterruptedException e) {
-                    logLine.setStatus(LogLine.STATE_FAILED);
                     mongoLogLineRepository.save(logLine);
                     LOG.error("Exception", e);
                 }
             }
         } else {
-            logLine.setStatus(LogLine.STATE_FAILED);
             mongoLogLineRepository.save(logLine);
         }
     }

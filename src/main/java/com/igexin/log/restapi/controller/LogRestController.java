@@ -16,7 +16,6 @@ import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import com.igexin.log.restapi.util.VersionUtil;
 import com.igexin.log.restapi.weed.WeedFSClientService;
-import com.igexin.log.restapi.weed.WeedFSFile;
 import com.igexin.log.restapi.weed.WeedFSMeta;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONArray;
@@ -471,11 +470,8 @@ public class LogRestController {
                 if (!fileSumString.equalsIgnoreCase(fileSum)) {
                     throw new ServerException();
                 }
-
                 // Write attachment file to weed fs.
-                WeedFSFile weedFSFile = WeedFSFile.create(key, extension);
-                WeedAttachFileMeta weedAttachFileMeta = WeedAttachFileMeta.create(key, System.currentTimeMillis());
-                weedFSClientService.write(weedFSFile, WeedFSMeta.createAttachFileMeta(weedAttachFileMeta));
+                weedFSClientService.write(WeedFSMeta.create(key, extension, WeedAttachFileMeta.create(key)));
             } catch (IOException e) {
                 throw new ServerException();
             }

@@ -1,5 +1,6 @@
 package com.igexin.log.restapi;
 
+import com.igexin.log.restapi.util.StringUtil;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -87,6 +88,10 @@ public class LogfulProperties {
         return getWeed().getTtl();
     }
 
+    public long ttlSeconds() {
+        return getWeed().getTtlSeconds();
+    }
+
     public static class Parser {
 
         private int maxThreads;
@@ -122,6 +127,8 @@ public class LogfulProperties {
 
         private String ttl;
 
+        private long ttlSeconds;
+
         public int getConnectTimeout() {
             return connectTimeout;
         }
@@ -151,7 +158,12 @@ public class LogfulProperties {
         }
 
         public void setTtl(String ttl) {
+            this.ttlSeconds = StringUtil.weedTTLToSecond(ttl);
             this.ttl = ttl;
+        }
+
+        public long getTtlSeconds() {
+            return ttlSeconds;
         }
 
         public Master getMaster() {

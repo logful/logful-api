@@ -1,7 +1,11 @@
 package com.igexin.log.restapi.entity;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
+@Document(collection = "weed_attachment_file_meta")
 public class WeedAttachFileMeta {
 
     @Id
@@ -11,15 +15,23 @@ public class WeedAttachFileMeta {
 
     private String attachmentId;
 
-    private long timestamp;
+    private Date writeDate;
 
     private long size;
 
-    public static WeedAttachFileMeta create(String attachmentId, long timestamp) {
+    public static WeedAttachFileMeta create(String attachmentId) {
         WeedAttachFileMeta meta = new WeedAttachFileMeta();
         meta.setAttachmentId(attachmentId);
-        meta.setTimestamp(timestamp);
+        meta.setWriteDate(new Date());
         return meta;
+    }
+
+    public Date getWriteDate() {
+        return writeDate;
+    }
+
+    public void setWriteDate(Date writeDate) {
+        this.writeDate = writeDate;
     }
 
     public String getAttachmentId() {
@@ -52,14 +64,6 @@ public class WeedAttachFileMeta {
 
     public void setFid(String fid) {
         this.fid = fid;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
     }
 
 }

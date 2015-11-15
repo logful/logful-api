@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class WeedFSHandlerThread {
+public class WeedFSReadThread {
 
     private final ReentrantLock lock;
 
@@ -24,28 +24,29 @@ public class WeedFSHandlerThread {
 
     private final Thread handlerThread;
 
-    public WeedFSHandlerThread(final String dirPath,
-                               final MongoWeedLogFileMetaRepository logRepository,
-                               final MongoWeedAttachFileMetaRepository attachRepository,
-                               final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap,
-                               final BlockingQueue<WeedFSFile> queue) {
+    public WeedFSReadThread(final String dirPath,
+                            final MongoWeedLogFileMetaRepository logRepository,
+                            final MongoWeedAttachFileMetaRepository attachRepository,
+                            final WeedQueueRepository queueRepository,
+                            final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap,
+                            final BlockingQueue<WeedFSMeta> queue) {
         this.lock = new ReentrantLock();
 
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                WeedFSFile weedFSFile = null;
+                WeedFSMeta weedFSMeta = null;
 
                 while (running.get()) {
                     lock.lock();
 
                     try {
-                        if (weedFSFile == null) {
-                            weedFSFile = queue.poll(100, TimeUnit.MILLISECONDS);
+                        if (weedFSMeta == null) {
+                            weedFSMeta = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
-                        if (weedFSFile != null && !StringUtil.isEmpty(dirPath)) {
+                        if (weedFSMeta != null && !StringUtil.isEmpty(dirPath)) {
                             try {
-                                JSONObject object = weedFSFile.responseObject();
+                                JSONObject object = weedFSMeta.responseObject();
                                 if (object != null) {
                                     boolean success = object.has("fid") && object.has("fileName")
                                             && object.has("size") && object.has("fileUrl");
@@ -81,6 +82,12 @@ public class WeedFSHandlerThread {
                                             // Remove WeedFSMeta form map.
                                             weedMetaMap.remove(key);
                                         }
+
+                                        if (!StringUtil.isEmpty(weedFSMeta.getId())) {
+                                            weedFSMeta.setStatus(WeedFSMeta.STATE_SUCCESSFUL);
+                                            queueRepository.save(weedFSMeta);
+                                        }
+
                                         String filePath = dirPath + "/" + filename;
                                         FileUtils.deleteQuietly(new File(filePath));
                                     }
@@ -88,7 +95,7 @@ public class WeedFSHandlerThread {
                             } catch (Exception e) {
                                 // Ignore all exception.
                             } finally {
-                                weedFSFile = null;
+                                weedFSMeta = null;
                             }
                         }
                     } catch (InterruptedException e) {

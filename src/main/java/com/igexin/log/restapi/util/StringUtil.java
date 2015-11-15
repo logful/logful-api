@@ -97,4 +97,41 @@ public class StringUtil {
     public static boolean decryptError(String message) {
         return isEmpty(message) || StringUtils.equals(message, Constants.CRYPTO_ERROR);
     }
+
+    public static long weedTTLToSecond(String ttl) {
+        if (StringUtil.isEmpty(ttl)) {
+            throw new IllegalArgumentException("No ttl specify!");
+        }
+        long seconds;
+        int length = ttl.length();
+        try {
+            int value = Integer.parseInt(ttl.substring(0, length - 1));
+            String unit = ttl.substring(length - 1, length);
+            switch (unit) {
+                case "m":
+                    seconds = value * 60;
+                    break;
+                case "h":
+                    seconds = value * 60 * 60;
+                    break;
+                case "d":
+                    seconds = value * 24 * 60 * 60;
+                    break;
+                case "w":
+                    seconds = value * 7 * 24 * 60 * 60;
+                    break;
+                case "M":
+                    seconds = value * 30 * 24 * 60 * 60;
+                    break;
+                case "y":
+                    seconds = value * 365 * 24 * 60 * 60;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown unit!");
+            }
+            return seconds;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Value format error!");
+        }
+    }
 }

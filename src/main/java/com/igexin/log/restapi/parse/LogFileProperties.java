@@ -3,7 +3,6 @@ package com.igexin.log.restapi.parse;
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.entity.WeedLogFileMeta;
 import com.igexin.log.restapi.util.StringUtil;
-import com.igexin.log.restapi.weed.WeedFSFile;
 import com.igexin.log.restapi.weed.WeedFSMeta;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -168,11 +167,7 @@ public class LogFileProperties {
         return workPath + "/" + Constants.WEED_TEMP_DIR + "/" + key + "." + extension;
     }
 
-    public WeedFSFile createWeedFSFile() {
-        return WeedFSFile.create(key, extension);
-    }
-
-    public WeedFSMeta createWeedFSMeta() {
+    public WeedFSMeta create() {
         int index = originalFilename.indexOf(".");
         String[] temp = originalFilename.substring(0, index).split("-");
         if (temp.length != 4) {
@@ -181,9 +176,9 @@ public class LogFileProperties {
         String date = temp[1];
         try {
             int fragment = Integer.parseInt(temp[3]);
-            WeedLogFileMeta logFileMeta = WeedLogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
+            WeedLogFileMeta meta = WeedLogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
                     appId, loggerName, date, (short) level, fragment);
-            return WeedFSMeta.createLogFileMeta(logFileMeta);
+            return WeedFSMeta.create(key, extension, meta);
         } catch (Exception e) {
             return null;
         }

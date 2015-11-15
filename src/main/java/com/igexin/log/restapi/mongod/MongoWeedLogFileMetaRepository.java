@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-// TODO
 @Repository
 public class MongoWeedLogFileMetaRepository {
 
@@ -18,6 +17,10 @@ public class MongoWeedLogFileMetaRepository {
     @Autowired
     public MongoWeedLogFileMetaRepository(MongoOperations operations) {
         this.operations = operations;
+    }
+
+    public MongoOperations getOperations() {
+        return operations;
     }
 
     public WeedLogFileMeta save(WeedLogFileMeta fileMeta) {

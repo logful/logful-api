@@ -4,20 +4,16 @@ import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Date;
+
+@Document(collection = "log_line")
 public class LogLine {
 
     public static final int STATE_NORMAL = 0x01;
 
-    /**
-     * 上传到 graylog 失败
-     */
-    public static final int STATE_FAILED = 0x02;
-
-    /**
-     * 上传到 graylog 成功
-     */
-    public static final int STATE_SUCCESSFUL = 0x03;
+    public static final int STATE_SUCCESSFUL = 0x02;
 
     @Id
     private String id;
@@ -58,6 +54,12 @@ public class LogLine {
 
     private String attachment;
 
+    private Date writeDate;
+
+    public LogLine() {
+        this.status = STATE_NORMAL;
+    }
+
     public static LogLine create(String platform, String uid, String appId,
                                  String loggerName, String msgLayout,
                                  int level, long timestamp, String tag,
@@ -75,7 +77,16 @@ public class LogLine {
         logLine.setStatus(STATE_NORMAL);
         logLine.setAlias(alias);
         logLine.setAttachment(attachment);
+        logLine.setWriteDate(new Date());
         return logLine;
+    }
+
+    public Date getWriteDate() {
+        return writeDate;
+    }
+
+    public void setWriteDate(Date writeDate) {
+        this.writeDate = writeDate;
     }
 
     public String getPlatform() {

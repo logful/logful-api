@@ -20,6 +20,10 @@ public class MongoLogLineRepository {
         this.operations = operations;
     }
 
+    public MongoOperations getOperations() {
+        return operations;
+    }
+
     public LogLine findById(String id) {
         Query query = new Query(Criteria.where("_id").is(id));
         return operations.findOne(query, LogLine.class);
@@ -40,15 +44,20 @@ public class MongoLogLineRepository {
         return operations.findAll(LogLine.class);
     }
 
-    public List<LogLine> findAllFailed() {
-        Query query = new Query(Criteria.where("status").is(LogLine.STATE_FAILED));
+    public List<LogLine> findAllNotSend() {
+        Query query = new Query(Criteria.where("status").is(LogLine.STATE_NORMAL));
         return operations.find(query, LogLine.class);
     }
 
-    public List<LogLine> findAllFailedLimit(int limit) {
-        Query query = new Query(Criteria.where("status").is(LogLine.STATE_FAILED));
+    public List<LogLine> findAllNotSendLimit(int limit) {
+        Query query = new Query(Criteria.where("status").is(LogLine.STATE_NORMAL));
         query.limit(limit);
         return operations.find(query, LogLine.class);
+    }
+
+    public void deleteAllSendSuccessRecord() {
+        Query query = new Query(Criteria.where("status").is(LogLine.STATE_SUCCESSFUL));
+        operations.findAndRemove(query, LogLine.class);
     }
 
 }
