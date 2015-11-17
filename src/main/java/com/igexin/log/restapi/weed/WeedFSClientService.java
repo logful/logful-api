@@ -16,6 +16,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -56,6 +58,8 @@ public class WeedFSClientService implements ChannelFutureListener {
     private WeedQueueRepository weedQueueRepository;
 
     private AtomicBoolean connected = new AtomicBoolean(false);
+
+    private AtomicBoolean serverError = new AtomicBoolean(false);
 
     public ConcurrentHashMap<String, WeedFSMeta> getWeedMetaMap() {
         return weedMetaMap;
@@ -147,6 +151,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                             FullHttpResponse response = (FullHttpResponse) msg;
                             HttpResponseStatus status = response.getStatus();
                             if (status.code() == 201) {
+                                serverError.set(false);
                                 // Created
                                 ByteBuf content = response.content();
                                 if (content != null && content.isReadable()) {
@@ -158,6 +163,8 @@ public class WeedFSClientService implements ChannelFutureListener {
                                         LOG.error("Exception", e);
                                     }
                                 }
+                            } else if (status.code() == 500) {
+                                serverError.set(true);
                             }
                         }
                     }
@@ -165,6 +172,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                         connected.set(true);
+                        serverError.set(false);
 
                         writeThread.start(ctx.channel());
                         readThread.start();
@@ -205,11 +213,17 @@ public class WeedFSClientService implements ChannelFutureListener {
 
     public void write(WeedFSMeta meta) {
         if (connected.get()) {
-            try {
-                queue.writeQueue.put(meta);
-                weedMetaMap.put(meta.getKey(), meta);
-            } catch (InterruptedException e) {
-                LOG.error("Exception", e);
+            if (!serverError.get()) {
+                try {
+                    queue.writeQueue.put(meta);
+                    weedMetaMap.put(meta.getKey(), meta);
+                } catch (InterruptedException e) {
+                    LOG.error("Exception", e);
+                }
+            } else {
+                // Weed server unexpected error just delete file.
+                File file = new File(logfulProperties.weedDir() + "/" + meta.filename());
+                FileUtils.deleteQuietly(file);
             }
         } else {
             weedQueueRepository.save(meta);

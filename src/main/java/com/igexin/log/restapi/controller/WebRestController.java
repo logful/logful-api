@@ -73,10 +73,9 @@ public class WebRestController {
     @ResponseBody
     public String status() {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("status", 0);
         jsonObject.put("version", "0.2.0");
-        jsonObject.put("graylog_connected", graylogClientService.isConnected());
-        jsonObject.put("weed_fs_connected", weedFSClientService.isConnected());
+        jsonObject.put("graylogConnected", graylogClientService.isConnected());
+        jsonObject.put("weedFSConnected", weedFSClientService.isConnected());
         return jsonObject.toString();
     }
 

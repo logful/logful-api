@@ -52,10 +52,6 @@ public class LogfulProperties {
         return path + "/" + Constants.CACHE_DIR;
     }
 
-    public String errorDir(String platform) {
-        return path + "/" + Constants.ERROR_DIR + "/" + platform.toLowerCase();
-    }
-
     public String crashReportDir(String platform) {
         return path + "/" + Constants.CRASH_REPORT_DIR + "/" + platform.toLowerCase();
     }
