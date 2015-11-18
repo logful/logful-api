@@ -7,19 +7,25 @@ import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.weed.WeedFSClientService;
 import com.igexin.log.restapi.weed.WeedFSMeta;
 import com.igexin.log.restapi.weed.WeedQueueRepository;
-import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ScheduledTasks {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
 
     private static final int PAGE_LIMIT = 2048;
 
@@ -71,17 +77,38 @@ public class ScheduledTasks {
             }
         }
 
-        long ttl = logfulProperties.ttlSeconds() * 1000;
-        long current = System.currentTimeMillis();
+        final long ttl = logfulProperties.ttlSeconds() * 1000;
+        final long current = System.currentTimeMillis();
 
-        File dir = new File(weedPath);
-        File[] files = dir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (current - file.lastModified() >= ttl) {
-                    FileUtils.deleteQuietly(file);
+        final Path path = Paths.get(logfulProperties.getPath());
+        try {
+            Files.walkFileTree(path, new FileVisitor<Path>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    return FileVisitResult.CONTINUE;
                 }
-            }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    long createTime = attrs.creationTime().toMillis();
+                    if (current - createTime >= ttl) {
+                        Files.delete(path);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    return FileVisitResult.TERMINATE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (Exception e) {
+            LOG.error("Exception", e);
         }
     }
 
