@@ -23,22 +23,27 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
 
     private List<SenderInterface> senderList = new ArrayList<>();
 
-    private GraylogClientService graylogService;
-
-    private WeedFSClientService weedService;
-
-    private LogFileProperties properties;
-
     private AtomicBoolean decryptFailed = new AtomicBoolean(false);
 
-    public static LogFileParseTask create(final LogFileProperties properties,
-                                          final GraylogClientService graylogService,
-                                          final WeedFSClientService weedService) {
-        LogFileParseTask task = new LogFileParseTask();
-        task.properties = properties;
-        task.graylogService = graylogService;
-        task.weedService = weedService;
-        return task;
+    private String originalFilePath;
+
+    private String unzipFilePath;
+
+    private final LogFileProperties properties;
+
+    private final WeedFSClientService weedService;
+
+    private GraylogClientService graylogService;
+
+    private final LocalFileSender localFileSender;
+
+    public LogFileParseTask(final LogFileProperties properties,
+                            final GraylogClientService graylogService,
+                            final WeedFSClientService weedService) {
+        this.properties = properties;
+        this.graylogService = graylogService;
+        this.weedService = weedService;
+        this.localFileSender = LocalFileSender.create(properties);
     }
 
     @Override
@@ -47,9 +52,10 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
             return;
         }
         String currentPath = properties.tempPath();
-        String inFilePath = currentPath + "/" + properties.getFilename();
-        String unzipFilename = StringUtil.randomUid();
 
+        originalFilePath = currentPath + "/" + properties.getFilename();
+
+        String unzipFilename = StringUtil.randomUid();
         // Check temp dir exist.
         File tempDir = new File(currentPath);
         if (!tempDir.exists()) {
@@ -58,25 +64,21 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
             }
         }
 
-        String outFilePath = currentPath + "/" + unzipFilename;
-        boolean successful = GzipTool.decompress(inFilePath, outFilePath);
+        unzipFilePath = currentPath + "/" + unzipFilename;
+        boolean successful = GzipTool.decompress(originalFilePath, unzipFilePath);
         if (successful) {
-            LocalFileSender localFileSender = LocalFileSender.create(properties);
-            senderList.add(localFileSender);
-
             // 日志级别为 verbose 的默认不发送到 graylog.
             if (properties.getLevel() != Constants.VERBOSE) {
                 senderList.add(graylogService);
             }
 
-            LogFileParser parser = new LogFileParser();
-            parser.setListener(this);
-            parser.parse(outFilePath);
-        }
+            senderList.add(localFileSender);
 
-        // Delete upload zip file.
-        File file = new File(inFilePath);
-        FileUtils.deleteQuietly(file);
+            new LogFileParser(this).parse(unzipFilePath);
+        } else {
+            FileUtils.deleteQuietly(new File(originalFilePath));
+            FileUtils.deleteQuietly(new File(unzipFilePath));
+        }
     }
 
     @Override
@@ -115,39 +117,36 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
     }
 
     @Override
-    public void result(String inFilePath, boolean successful) {
-        for (SenderInterface object : senderList) {
-            if (object instanceof LocalFileSender) {
-                LocalFileSender sender = (LocalFileSender) object;
+    public void result(boolean successful) {
+        if (localFileSender != null) {
+            try {
+                localFileSender.release();
+            } catch (Exception e) {
+                LOG.error("Exception", e);
+            }
+        }
+        if (successful && !decryptFailed.get()) {
+            WeedFSMeta meta = properties.create();
+            if (meta != null) {
+                weedService.write(meta);
+            }
+        } else {
+            File destDir = new File(properties.errorPath());
+            if (!StringUtil.isEmpty(unzipFilePath)) {
                 try {
-                    sender.release();
-                    LogFileProperties properties = sender.getProperties();
-                    if (properties != null) {
-                        if (successful && !decryptFailed.get()) {
-                            WeedFSMeta meta = properties.create();
-                            if (meta != null) {
-                                weedService.write(meta);
-                            }
-                        } else {
-                            // Decrypt log file failed.
-                            File destDir = new File(properties.errorPath());
-                            try {
-                                FileUtils.moveFileToDirectory(new File(inFilePath), destDir, true);
-                            } catch (IOException e) {
-                                LOG.error("Exception", e);
-                            }
-
-                            // Delete decrypt failed failed.
-                            FileUtils.deleteQuietly(new File(properties.outFilePath()));
-                        }
-                    }
-                } catch (Exception e) {
+                    FileUtils.moveFileToDirectory(new File(unzipFilePath), destDir, true);
+                } catch (IOException e) {
                     LOG.error("Exception", e);
                 }
             }
         }
-        // Delete encrypted file.
-        FileUtils.deleteQuietly(new File(inFilePath));
+
+        if (!StringUtil.isEmpty(originalFilePath)) {
+            FileUtils.deleteQuietly(new File(originalFilePath));
+        }
+        if (!StringUtil.isEmpty(unzipFilePath)) {
+            FileUtils.deleteQuietly(new File(unzipFilePath));
+        }
     }
 
 }

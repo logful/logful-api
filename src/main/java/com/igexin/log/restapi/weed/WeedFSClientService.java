@@ -69,6 +69,18 @@ public class WeedFSClientService implements ChannelFutureListener {
         return connected.get();
     }
 
+    public boolean isServerError() {
+        return serverError.get();
+    }
+
+    public void resetServerError() {
+        serverError.set(false);
+    }
+
+    public int writeQueueSize() {
+        return queue.writeQueue.size();
+    }
+
     @PostConstruct
     public void create() {
         MongoOperations operations = mongoWeedLogFileMetaRepository.getOperations();
@@ -164,6 +176,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                                     }
                                 }
                             } else if (status.code() == 500) {
+                                // TODO
                                 serverError.set(true);
                             }
                         }

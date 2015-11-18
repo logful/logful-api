@@ -76,6 +76,7 @@ public class WebRestController {
         jsonObject.put("version", "0.2.0");
         jsonObject.put("graylogConnected", graylogClientService.isConnected());
         jsonObject.put("weedFSConnected", weedFSClientService.isConnected());
+        jsonObject.put("weedFSServerError", weedFSClientService.isServerError());
         return jsonObject.toString();
     }
 
@@ -101,7 +102,7 @@ public class WebRestController {
         jsonObject.put("poolSize", threadPoolTaskExecutor.getPoolSize());
 
         jsonObject.put("capacity", logfulProperties.getParser().getQueueCapacity());
-        jsonObject.put("active", threadPoolTaskExecutor.getActiveCount());
+        jsonObject.put("active", threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size());
 
         return jsonObject.toString();
     }
@@ -142,8 +143,7 @@ public class WebRestController {
         File outFile = new File(cacheDirPath + "/" + filename);
 
         final LocalFileSender fileSender = LocalFileSender.create(outFile.getAbsolutePath());
-        LogFileParser parser = new LogFileParser();
-        parser.setListener(new LogFileParser.ParserEventListener() {
+        LogFileParser parser = new LogFileParser(new LogFileParser.ParserEventListener() {
             @Override
             public void output(long timestamp, String encryptedTag, String encryptedMsg, short layoutId, int attachmentId) {
                 String tag = CryptoTool.decrypt(appId, encryptedTag);
@@ -159,7 +159,7 @@ public class WebRestController {
             }
 
             @Override
-            public void result(String inFilePath, boolean successful) {
+            public void result(boolean successful) {
                 if (!successful) {
                     throw new ServerException();
                 }
@@ -528,7 +528,7 @@ public class WebRestController {
         //
     }
 
-    @ResponseStatus(value = HttpStatus.EXPECTATION_FAILED)
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public class ServerException extends RuntimeException {
 
     }

@@ -38,9 +38,11 @@ public class ScheduledTasks {
     @Autowired
     private GraylogClientService graylogClientService;
 
-    @Scheduled(cron = "*/600 * * * * *")
+    @Scheduled(cron = "*/300 * * * * *")
     @Async
     public void retryPutQueue() {
+        weedFSClientService.resetServerError();
+
         if (graylogClientService.isConnected()) {
             List<LogLine> logLineList = mongoLogLineRepository.findAllNotSendLimit(PAGE_LIMIT);
             for (LogLine logLine : logLineList) {
@@ -60,10 +62,10 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 */1 * * *") // 每一小时执行一次
     @Async
     public void clearSystem() {
-        String path = logfulProperties.weedDir();
+        String weedPath = logfulProperties.weedDir();
         ConcurrentHashMap<String, WeedFSMeta> map = weedFSClientService.getWeedMetaMap();
         for (Map.Entry<String, WeedFSMeta> entry : map.entrySet()) {
-            File file = new File(path + "/" + entry.getKey() + "." + entry.getValue().getExtension());
+            File file = new File(weedPath + "/" + entry.getKey() + "." + entry.getValue().getExtension());
             if (!file.exists()) {
                 map.remove(entry.getKey());
             }
@@ -71,7 +73,8 @@ public class ScheduledTasks {
 
         long ttl = logfulProperties.ttlSeconds() * 1000;
         long current = System.currentTimeMillis();
-        File dir = new File(path);
+
+        File dir = new File(weedPath);
         File[] files = dir.listFiles();
         if (files != null) {
             for (File file : files) {

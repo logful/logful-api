@@ -370,49 +370,51 @@ public class LogRestController {
                                    String alias,
                                    String fileSum,
                                    MultipartFile logFile) {
-        String tempDirPath = logfulProperties.tempDir();
-        File tempDir = new File(tempDirPath);
-        if (!tempDir.exists()) {
-            if (tempDir.mkdirs()) {
-                throw new ServerException();
+        int queueSize = threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size();
+        int capacity = ControllerUtil.queueCapacity(logfulProperties.getParser().getQueueCapacity());
+        if (queueSize < capacity) {
+            String tempDirPath = logfulProperties.tempDir();
+            File tempDir = new File(tempDirPath);
+            if (!tempDir.exists()) {
+                if (tempDir.mkdirs()) {
+                    throw new ServerException();
+                }
             }
-        }
 
-        String filename = StringUtil.randomUid();
-        String originalFilename = logFile.getOriginalFilename();
-        String filePath = tempDirPath + "/" + filename;
-        File file = new File(filePath);
-        try {
-            logFile.transferTo(file);
-            // Check uploaded file sum.
-            String sum = Checksum.fileMD5(file.getAbsolutePath());
-            if (!sum.equalsIgnoreCase(fileSum)) {
+            String filename = StringUtil.randomUid();
+            String originalFilename = logFile.getOriginalFilename();
+            String filePath = tempDirPath + "/" + filename;
+            File file = new File(filePath);
+            try {
+                logFile.transferTo(file);
+                // Check uploaded file sum.
+                String sum = Checksum.fileMD5(file.getAbsolutePath());
+                if (!sum.equalsIgnoreCase(fileSum)) {
+                    throw new ServerException();
+                }
+            } catch (IOException e) {
                 throw new ServerException();
             }
-        } catch (IOException e) {
+
+            LogFileProperties properties = new LogFileProperties();
+            properties.setPlatform(platform);
+            properties.setUid(uid);
+            properties.setAppId(appId);
+            properties.setLevel(Integer.parseInt(level));
+            properties.setLoggerName(loggerName);
+            properties.setAlias(alias);
+            properties.setLayouts(layouts);
+            properties.setFilename(filename);
+            properties.setOriginalFilename(originalFilename);
+            properties.setWorkPath(logfulProperties.getPath());
+
+            LogFileParseTask task = new LogFileParseTask(properties, graylogClientService, weedFSClientService);
+            threadPoolTaskExecutor.submit(task);
+
+            return responseJson(0, "");
+        } else {
             throw new ServerException();
         }
-
-        LogFileProperties properties = new LogFileProperties();
-        properties.setPlatform(platform);
-        properties.setUid(uid);
-        properties.setAppId(appId);
-        properties.setLevel(Integer.parseInt(level));
-        properties.setLoggerName(loggerName);
-        properties.setAlias(alias);
-        properties.setLayouts(layouts);
-        properties.setFilename(filename);
-        properties.setOriginalFilename(originalFilename);
-        properties.setWorkPath(logfulProperties.getPath());
-
-        LogFileParseTask task = LogFileParseTask.create(
-                properties,
-                graylogClientService,
-                weedFSClientService
-        );
-        threadPoolTaskExecutor.submit(task);
-
-        return responseJson(0, "");
     }
 
     private String v1UploadCrashReport(String platform,
@@ -452,34 +454,37 @@ public class LogRestController {
                                       String fileSum,
                                       String attachmentId,
                                       MultipartFile attachmentFile) {
-        String key = StringUtil.attachmentKey(platform, uid, appId, attachmentId);
-        String extension = FilenameUtils.getExtension(attachmentFile.getOriginalFilename());
-        if (!StringUtil.isEmpty(key) && !StringUtil.isEmpty(extension)) {
-            File dir = new File(logfulProperties.weedDir());
-            if (!dir.exists()) {
-                if (!dir.mkdirs()) {
+        if (weedFSClientService.writeQueueSize() < logfulProperties.getWeed().getQueueCapacity()) {
+            String key = StringUtil.attachmentKey(platform, uid, appId, attachmentId);
+            String extension = FilenameUtils.getExtension(attachmentFile.getOriginalFilename());
+            if (!StringUtil.isEmpty(key) && !StringUtil.isEmpty(extension)) {
+                File dir = new File(logfulProperties.weedDir());
+                if (!dir.exists()) {
+                    if (!dir.mkdirs()) {
+                        throw new ServerException();
+                    }
+                }
+                String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
+                File file = new File(filePath);
+                try {
+                    attachmentFile.transferTo(file);
+                    // Check uploaded file sum
+                    String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
+                    if (!fileSumString.equalsIgnoreCase(fileSum)) {
+                        throw new ServerException();
+                    }
+                    // Write attachment file to weed fs.
+                    weedFSClientService.write(WeedFSMeta.create(key, extension, WeedAttachFileMeta.create(key)));
+                } catch (IOException e) {
                     throw new ServerException();
                 }
+            } else {
+                throw new BadRequestException();
             }
-            String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
-            File file = new File(filePath);
-            try {
-                attachmentFile.transferTo(file);
-                // Check uploaded file sum
-                String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
-                if (!fileSumString.equalsIgnoreCase(fileSum)) {
-                    throw new ServerException();
-                }
-                // Write attachment file to weed fs.
-                weedFSClientService.write(WeedFSMeta.create(key, extension, WeedAttachFileMeta.create(key)));
-            } catch (IOException e) {
-                throw new ServerException();
-            }
+            return responseJson(0, "");
         } else {
-            throw new BadRequestException();
+            throw new ServerException();
         }
-
-        return responseJson(0, "");
     }
 
     /**
@@ -508,7 +513,7 @@ public class LogRestController {
         }
     }
 
-    @ResponseStatus(value = HttpStatus.EXPECTATION_FAILED)
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
     public class ServerException extends RuntimeException {
 
     }

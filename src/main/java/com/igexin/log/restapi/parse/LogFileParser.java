@@ -11,12 +11,12 @@ public class LogFileParser implements ParserInterface {
     public interface ParserEventListener {
         void output(long timestamp, String encryptedTag, String encryptedMsg, short layoutId, int attachmentId);
 
-        void result(String inFilePath, boolean successful);
+        void result(boolean successful);
     }
 
-    private ParserEventListener listener;
+    private final ParserEventListener listener;
 
-    public void setListener(ParserEventListener listener) {
+    public LogFileParser(ParserEventListener listener) {
         this.listener = listener;
     }
 
@@ -159,7 +159,7 @@ public class LogFileParser implements ParserInterface {
             }
         }
         if (listener != null) {
-            listener.result(inFilePath, successful);
+            listener.result(successful);
         }
     }
 

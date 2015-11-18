@@ -15,4 +15,15 @@ public class ControllerUtil {
         return param == null || param.length() == 0;
     }
 
+    public static int queueCapacity(int capacity) {
+        if (capacity == 1) {
+            return capacity;
+        }
+        int buffer = capacity / 32;
+        if (buffer == 0) {
+            buffer = 1;
+        }
+        return capacity - buffer;
+    }
+
 }
