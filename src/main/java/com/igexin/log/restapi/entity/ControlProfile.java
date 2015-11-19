@@ -22,7 +22,7 @@ public class ControlProfile {
     /**
      * 平台.
      */
-    private int platform;
+    private Integer platform;
     /**
      * 用户 uid
      */
@@ -78,11 +78,11 @@ public class ControlProfile {
         this.scheduleArray = scheduleArray;
     }
 
-    public int getPlatform() {
+    public Integer getPlatform() {
         return platform;
     }
 
-    public void setPlatform(int platform) {
+    public void setPlatform(Integer platform) {
         this.platform = platform;
     }
 

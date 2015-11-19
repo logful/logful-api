@@ -64,10 +64,9 @@ public class ScheduledTasks {
         }
     }
 
-    //@Scheduled(cron = "0 10 1 ? * *") // 每天凌晨 1:10 执行
-    @Scheduled(cron = "0 0 */1 * * *") // 每一小时执行一次
+    @Scheduled(cron = "0 0 */1 * * *") // every hour
     @Async
-    public void clearSystem() {
+    public void clearMemory() {
         String weedPath = logfulProperties.weedDir();
         ConcurrentHashMap<String, WeedFSMeta> map = weedFSClientService.getWeedMetaMap();
         for (Map.Entry<String, WeedFSMeta> entry : map.entrySet()) {
@@ -76,13 +75,18 @@ public class ScheduledTasks {
                 map.remove(entry.getKey());
             }
         }
+    }
 
-        final long ttl = logfulProperties.ttlSeconds() * 1000;
+    //@Scheduled(cron = "0 10 1 ? * *") // every day 1:10
+    @Scheduled(cron = "0 0 */6 * * *")
+    @Async
+    public void clearFiles() {
+        LOG.info("++++++++++ clear system file task start ++++++++++");
+        final long ttl = logfulProperties.expires() * 1000;
         final long current = System.currentTimeMillis();
-
         final Path path = Paths.get(logfulProperties.getPath());
         try {
-            Files.walkFileTree(path, new FileVisitor<Path>() {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
                     return FileVisitResult.CONTINUE;
@@ -90,9 +94,13 @@ public class ScheduledTasks {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    long createTime = attrs.creationTime().toMillis();
-                    if (current - createTime >= ttl) {
-                        Files.delete(path);
+                    if (attrs.isRegularFile()) {
+                        if (!Files.isHidden(file)) {
+                            long diff = current - attrs.creationTime().toMillis();
+                            if (diff >= ttl) {
+                                Files.delete(file);
+                            }
+                        }
                     }
                     return FileVisitResult.CONTINUE;
                 }

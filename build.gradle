@@ -41,12 +41,12 @@ dependencies {
 
     compile 'com.googlecode.json-simple:json-simple:1.1.1'
     compile 'io.netty:netty-all:4.0.29.Final'
-    compile 'com.fasterxml.jackson.core:jackson-core:2.5.4'
     compile 'commons-lang:commons-lang:2.6'
     compile 'org.pojava:pojava:2.3.0'
     compile 'com.intellij:annotations:12.0'
     compile 'commons-io:commons-io:2.4'
-    compile 'com.fasterxml.jackson.core:jackson-databind'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.6.3'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.6.3'
     testCompile("org.springframework.boot:spring-boot-starter-test")
 }
 

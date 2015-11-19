@@ -42,7 +42,7 @@ public class GraylogClientService implements SenderInterface {
         MongoOperations operations = mongoLogLineRepository.getOperations();
         try {
             BasicDBObject index = new BasicDBObject("writeDate", 1);
-            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.ttlSeconds());
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
 
             DBCollection collection = operations.getCollection(operations.getCollectionName(LogLine.class));
             collection.createIndex(index, options);

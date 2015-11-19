@@ -88,7 +88,7 @@ public class WeedFSClientService implements ChannelFutureListener {
             DBCollection collection;
 
             BasicDBObject index = new BasicDBObject("writeDate", 1);
-            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.ttlSeconds());
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
 
             collection = operations.getCollection(operations.getCollectionName(WeedLogFileMeta.class));
             collection.createIndex(index, options);
@@ -137,7 +137,7 @@ public class WeedFSClientService implements ChannelFutureListener {
 
         URI uri;
         try {
-            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, logfulProperties.weedTimeToLive()));
+            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, logfulProperties.getTtl()));
         } catch (URISyntaxException e) {
             throw new RuntimeException("Weed fs submit uri syntax error!");
         }

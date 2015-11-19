@@ -10,11 +10,24 @@ public class LogfulProperties {
 
     private String path;
 
+    private long ttlSeconds;
+
+    private String ttl;
+
     private Parser parser;
 
     private Weed weed;
 
     private Graylog graylog;
+
+    public String getTtl() {
+        return ttl;
+    }
+
+    public void setTtl(String ttl) {
+        this.ttlSeconds = StringUtil.weedTTLToSecond(ttl);
+        this.ttl = ttl;
+    }
 
     public Parser getParser() {
         return parser;
@@ -80,12 +93,8 @@ public class LogfulProperties {
         return getWeed().getMaster().getPort();
     }
 
-    public String weedTimeToLive() {
-        return getWeed().getTtl();
-    }
-
-    public long ttlSeconds() {
-        return getWeed().getTtlSeconds();
+    public long expires() {
+        return this.ttlSeconds;
     }
 
     public static class Parser {
@@ -121,9 +130,6 @@ public class LogfulProperties {
 
         private int queueCapacity;
 
-        private String ttl;
-
-        private long ttlSeconds;
 
         public int getConnectTimeout() {
             return connectTimeout;
@@ -147,19 +153,6 @@ public class LogfulProperties {
 
         public void setQueueCapacity(int queueCapacity) {
             this.queueCapacity = queueCapacity;
-        }
-
-        public String getTtl() {
-            return ttl;
-        }
-
-        public void setTtl(String ttl) {
-            this.ttlSeconds = StringUtil.weedTTLToSecond(ttl);
-            this.ttl = ttl;
-        }
-
-        public long getTtlSeconds() {
-            return ttlSeconds;
         }
 
         public Master getMaster() {

@@ -102,7 +102,7 @@ public class WebRestController {
         jsonObject.put("poolSize", threadPoolTaskExecutor.getPoolSize());
 
         jsonObject.put("capacity", logfulProperties.getParser().getQueueCapacity());
-        jsonObject.put("active", threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size());
+        jsonObject.put("queueSize", threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size());
 
         return jsonObject.toString();
     }
@@ -225,11 +225,12 @@ public class WebRestController {
      * @return Log file list
      */
     @RequestMapping(value = "/web/util/log/file/list",
-            method = RequestMethod.POST)
+            method = RequestMethod.POST,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String queryLogFileList(@RequestBody String json) {
-
         JSONObject object = new JSONObject(json);
         if (checkFields(object, new String[]{"platform", "uid", "appId", "date"})) {
             String platform = object.optString("platform");
@@ -453,7 +454,9 @@ public class WebRestController {
      * @return Attachment resource
      */
     @RequestMapping(value = "/web/util/attachment/{id}",
-            method = RequestMethod.GET)
+            method = RequestMethod.GET,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String getFidByAttachmentId(@PathVariable String id) {
@@ -470,7 +473,9 @@ public class WebRestController {
     }
 
     @RequestMapping(value = "/web/control/profile/edit",
-            method = RequestMethod.POST)
+            method = RequestMethod.POST,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
     @ResponseBody
     public ControlProfile saveControlProfile(@RequestBody ControlProfile profile) {
         boolean successful = mongoControlProfileRepository.save(profile);
@@ -482,7 +487,9 @@ public class WebRestController {
     }
 
     @RequestMapping(value = "/web/control/profile/list",
-            method = RequestMethod.GET)
+            method = RequestMethod.GET,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
     public ResponseEntity<List<ControlProfile>> listControlProfile() {
         List<ControlProfile> profiles = mongoControlProfileRepository.findAll();
         return new ResponseEntity<>(profiles, HttpStatus.OK);
