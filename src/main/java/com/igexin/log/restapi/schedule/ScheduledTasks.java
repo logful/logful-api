@@ -21,6 +21,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class ScheduledTasks {
@@ -28,6 +29,8 @@ public class ScheduledTasks {
     private static final Logger LOG = LoggerFactory.getLogger(ScheduledTasks.class);
 
     private static final int PAGE_LIMIT = 2048;
+
+    private static final long MAX_EXEC_MILLISECOND = 3600000;
 
     @Autowired
     private LogfulProperties logfulProperties;
@@ -43,6 +46,8 @@ public class ScheduledTasks {
 
     @Autowired
     private GraylogClientService graylogClientService;
+
+    private AtomicLong startExecTime = new AtomicLong(0);
 
     @Scheduled(cron = "*/300 * * * * *")
     @Async
@@ -82,18 +87,26 @@ public class ScheduledTasks {
     @Async
     public void clearFiles() {
         LOG.info("++++++++++ clear system file task start ++++++++++");
+        startExecTime.set(System.currentTimeMillis());
+
         final long ttl = logfulProperties.expires() * 1000;
-        final long current = System.currentTimeMillis();
         final Path path = Paths.get(logfulProperties.getPath());
         try {
             Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                    return FileVisitResult.CONTINUE;
+                    long current = System.currentTimeMillis();
+                    if (current - startExecTime.get() >= MAX_EXEC_MILLISECOND) {
+                        return FileVisitResult.TERMINATE;
+                    } else {
+                        return FileVisitResult.CONTINUE;
+                    }
                 }
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    long current = System.currentTimeMillis();
+
                     if (attrs.isRegularFile()) {
                         if (!Files.isHidden(file)) {
                             long diff = current - attrs.creationTime().toMillis();
@@ -102,7 +115,12 @@ public class ScheduledTasks {
                             }
                         }
                     }
-                    return FileVisitResult.CONTINUE;
+
+                    if (current - startExecTime.get() >= MAX_EXEC_MILLISECOND) {
+                        return FileVisitResult.TERMINATE;
+                    } else {
+                        return FileVisitResult.CONTINUE;
+                    }
                 }
 
                 @Override
@@ -112,7 +130,12 @@ public class ScheduledTasks {
 
                 @Override
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                    return FileVisitResult.CONTINUE;
+                    long current = System.currentTimeMillis();
+                    if (current - startExecTime.get() >= MAX_EXEC_MILLISECOND) {
+                        return FileVisitResult.TERMINATE;
+                    } else {
+                        return FileVisitResult.CONTINUE;
+                    }
                 }
             });
         } catch (Exception e) {
