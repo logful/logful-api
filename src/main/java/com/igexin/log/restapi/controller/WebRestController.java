@@ -28,6 +28,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 import java.util.List;
 
 @RestController
@@ -72,8 +74,12 @@ public class WebRestController {
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String status() {
+        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+        long startTime = runtimeMXBean.getStartTime();
+
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("version", "0.2.0");
+        jsonObject.put("startTime", startTime);
         jsonObject.put("graylogConnected", graylogClientService.isConnected());
         jsonObject.put("weedFSConnected", weedFSClientService.isConnected());
         jsonObject.put("weedFSServerError", weedFSClientService.isServerError());
@@ -190,7 +196,6 @@ public class WebRestController {
     @RequestMapping(value = "/web/util/decrypt/download/{uri}",
             method = RequestMethod.GET)
     public ResponseEntity<InputStreamResource> downloadLogFile(@PathVariable String uri) {
-
         String filename;
         try {
             filename = new String(Base64.decodeBase64(uri), "UTF-8");

@@ -85,6 +85,10 @@ public class LogfulProperties {
         return getGraylog().getPort();
     }
 
+    public String weedUrl() {
+        return "http://" + weedMasterHost() + ":" + weedMasterPort();
+    }
+
     public String weedMasterHost() {
         return getWeed().getMaster().getHost();
     }

@@ -51,6 +51,11 @@ public class MongoControlProfileRepository {
         return writeResult.getN() > 0;
     }
 
+    public ControlProfile find(String id) {
+        Query query = new Query(Criteria.where("_id").is(id));
+        return operations.findOne(query, ControlProfile.class);
+    }
+
     public List<ControlProfile> findAllByUser(UserInfo info) {
         int platform = info.getPlatform();
         String uid = info.getUid();

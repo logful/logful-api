@@ -38,6 +38,12 @@ public class MongoUserInfoRepository {
         return userInfo;
     }
 
+    public UserInfo findByUid(String uid) {
+        Criteria criteria = Criteria.where("uid").is(uid);
+        Query query = new Query(criteria);
+        return operations.findOne(query, UserInfo.class);
+    }
+
     public boolean delete(UserInfo userInfo) {
         Query query = new Query(Criteria.where("_id").is(userInfo.getId()));
         WriteResult writeResult = operations.remove(query, UserInfo.class);

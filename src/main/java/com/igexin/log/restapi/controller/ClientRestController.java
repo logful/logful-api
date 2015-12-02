@@ -34,7 +34,7 @@ import java.util.Collections;
 import java.util.List;
 
 @RestController
-public class LogRestController {
+public class ClientRestController {
 
     @Autowired
     private LogfulProperties logfulProperties;
