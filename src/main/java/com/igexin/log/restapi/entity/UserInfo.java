@@ -3,8 +3,11 @@ package com.igexin.log.restapi.entity;
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.util.ControllerUtil;
 import com.igexin.log.restapi.util.StringUtil;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.web.context.request.WebRequest;
 
@@ -38,6 +41,9 @@ public class UserInfo {
 
     private int level;
 
+    @Indexed(unique = true)
+    private String hashString;
+
     public static UserInfo create(WebRequest webRequest) {
         UserInfo userInfo = new UserInfo();
         userInfo.platform = StringUtil.platformNumber(webRequest.getParameter("platform"));
@@ -69,12 +75,8 @@ public class UserInfo {
         return userInfo;
     }
 
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
+    public void generateHashString() {
+        this.hashString = DigestUtils.md5Hex(toString());
     }
 
     public static int getPlatformAndroid() {
@@ -83,6 +85,22 @@ public class UserInfo {
 
     public static int getPlatformIos() {
         return Constants.PLATFORM_IOS;
+    }
+
+    public String getHashString() {
+        return hashString;
+    }
+
+    public void setHashString(String hashString) {
+        this.hashString = hashString;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public String getId() {
@@ -173,21 +191,13 @@ public class UserInfo {
         this.level = level;
     }
 
-
-    @Override
-    public int hashCode() {
-        String string = String.format("%d%s%s%s%s%s%s%s%d%s",
-                platform, uid,
-                alias, model,
-                imei, macAddress,
-                osVersion, appId,
-                version, versionString);
-        return string.hashCode();
-    }
-
     @Override
     public String toString() {
-        return "";
+        String[] array = {
+                String.valueOf(platform), uid, alias, model, imei, macAddress,
+                osVersion, appId, String.valueOf(version), versionString
+        };
+        return StringUtils.join(array, "");
     }
 
     public JSONObject toJsonObject() {

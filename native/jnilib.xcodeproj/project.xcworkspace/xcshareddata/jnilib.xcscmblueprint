@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "6C2CBD249FA6237B7D57EF42ADC5970E2FF9C9B6",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "6C2CBD249FA6237B7D57EF42ADC5970E2FF9C9B6" : 0,
+    "506E4AFAEA00BFAEF6C73477F5CAC4C719B2EC05" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "D8FD7F7D-0B47-4B23-B25D-67CC43FD5D2D",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "6C2CBD249FA6237B7D57EF42ADC5970E2FF9C9B6" : "logful-api\/",
+    "506E4AFAEA00BFAEF6C73477F5CAC4C719B2EC05" : "getui-log-restapi-java"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "jnilib",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "jnilib.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/115.236.68.62:9990\/frontend-mta\/getui-log-restapi-java.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "506E4AFAEA00BFAEF6C73477F5CAC4C719B2EC05"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:logful\/logful-api.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "6C2CBD249FA6237B7D57EF42ADC5970E2FF9C9B6"
+    }
+  ]
+}

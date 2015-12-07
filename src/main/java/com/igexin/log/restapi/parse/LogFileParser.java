@@ -1,15 +1,21 @@
 package com.igexin.log.restapi.parse;
 
 import com.igexin.log.restapi.util.ByteUtil;
+import com.igexin.log.restapi.util.CryptoTool;
+import com.igexin.log.restapi.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class LogFileParser implements ParserInterface {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LogFileParser.class);
+
     public interface ParserEventListener {
-        void output(long timestamp, String encryptedTag, String encryptedMsg, short layoutId, int attachmentId);
+        void output(long timestamp, String tag, String msg, short layoutId, int attachmentId);
 
         void result(boolean successful);
     }
@@ -21,13 +27,11 @@ public class LogFileParser implements ParserInterface {
     }
 
     @Override
-    public void parse(String inFilePath) {
+    public void parse(String appId, int cryptoVersion, InputStream inputStream) {
         boolean successful = true;
-        FileInputStream fileInputStream = null;
         BufferedInputStream bufferedInputStream = null;
         try {
-            fileInputStream = new FileInputStream(inFilePath);
-            bufferedInputStream = new BufferedInputStream(fileInputStream);
+            bufferedInputStream = new BufferedInputStream(inputStream);
             while (true) {
                 int bytesRead;
 
@@ -64,7 +68,6 @@ public class LogFileParser implements ParserInterface {
                     successful = false;
                     break;
                 }
-                String encryptedTag = new String(tagChunk);
 
                 // Parse log line msg
                 byte[] msgLenChunk = new byte[2];
@@ -80,7 +83,6 @@ public class LogFileParser implements ParserInterface {
                     successful = false;
                     break;
                 }
-                String encryptedMsg = new String(msgChunk);
 
                 // Parse log line msg layout id
                 byte[] layoutIdLenChunk = new byte[2];
@@ -107,9 +109,16 @@ public class LogFileParser implements ParserInterface {
                 }
                 short value = ByteUtil.bytesToShort(testMark);
 
+                String tag = CryptoTool.AESDecrypt(appId, tagChunk, cryptoVersion);
+                String msg = CryptoTool.AESDecrypt(appId, msgChunk, cryptoVersion);
+                if (StringUtil.decryptError(tag) || StringUtil.decryptError(msg)) {
+                    successful = false;
+                    break;
+                }
+
                 if (value == -100) {
                     if (listener != null) {
-                        listener.output(timestamp, encryptedTag, encryptedMsg, layoutId, -1);
+                        listener.output(timestamp, tag, msg, layoutId, -1);
                     }
                 } else {
                     if (value == 4) {
@@ -132,29 +141,29 @@ public class LogFileParser implements ParserInterface {
                         short eof = ByteUtil.bytesToShort(eofMark);
                         if (eof == -100) {
                             if (listener != null) {
-                                listener.output(timestamp, encryptedTag, encryptedMsg, layoutId, attachmentId);
+                                listener.output(timestamp, tag, msg, layoutId, attachmentId);
                             }
                         }
                     }
                 }
             }
             bufferedInputStream.close();
-            fileInputStream.close();
+            inputStream.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Exception", e);
         } finally {
-            if (fileInputStream != null) {
+            if (inputStream != null) {
                 try {
-                    fileInputStream.close();
+                    inputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.error("Exception", e);
                 }
             }
             if (bufferedInputStream != null) {
                 try {
                     bufferedInputStream.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOG.error("Exception", e);
                 }
             }
         }

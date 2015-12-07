@@ -2,39 +2,89 @@ package com.igexin.log.restapi.rest;
 
 import com.igexin.log.restapi.Constants;
 import com.igexin.log.restapi.LogfulProperties;
+import com.igexin.log.restapi.entity.WeedAttachFileMeta;
+import com.igexin.log.restapi.entity.WeedLogFileMeta;
+import com.igexin.log.restapi.mongod.MongoWeedAttachFileMetaRepository;
+import com.igexin.log.restapi.mongod.MongoWeedLogFileMetaRepository;
 import com.igexin.log.restapi.parse.LocalFileSender;
 import com.igexin.log.restapi.parse.LogFileParser;
-import com.igexin.log.restapi.util.ControllerUtil;
-import com.igexin.log.restapi.util.CryptoTool;
-import com.igexin.log.restapi.util.DateTimeUtil;
-import com.igexin.log.restapi.util.StringUtil;
+import com.igexin.log.restapi.util.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 public class LogRestController extends BaseRestController {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LogRestController.class);
+
     @Autowired
     private LogfulProperties logfulProperties;
+
+    @Autowired
+    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
+
+    @Autowired
+    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+
+    @Autowired
+    private WeedRestController weedRestController;
 
     @RequestMapping(value = "/api/log/files",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
-    public String listFiles() {
-        return "";
+    public String listFiles(final WebRequest request) {
+        String platform = request.getParameter("platform");
+        String uid = request.getParameter("uid");
+        String appId = request.getParameter("appId");
+        String date = request.getParameter("date");
+
+        if (!StringUtil.isEmpty(platform)
+                && !StringUtil.isEmpty(uid)
+                && !StringUtil.isEmpty(appId)
+                && !StringUtil.isEmpty(date)) {
+            Criteria criteria = Criteria.where("platform").is(StringUtil.platformNumber(platform));
+            criteria.and("uid").is(uid);
+            criteria.and("appId").is(appId);
+            criteria.and("date").is(date);
+
+            List<WeedLogFileMeta> fileMetaList = mongoWeedLogFileMetaRepository.findAllByCriteria(criteria);
+
+            JSONArray array = new JSONArray();
+            for (WeedLogFileMeta fileMeta : fileMetaList) {
+                JSONObject fileMetaObject = new JSONObject();
+
+                fileMetaObject.put("filename", fileMeta.originalFilename());
+                fileMetaObject.put("level", fileMeta.getLevel());
+                fileMetaObject.put("size", fileMeta.getSize());
+                fileMetaObject.put("fid", fileMeta.getFid());
+
+                array.put(fileMetaObject);
+            }
+
+            return array.toString();
+        } else {
+            throw new NotAcceptableException();
+        }
     }
 
     @RequestMapping(value = "/api/log/decrypt",
@@ -89,16 +139,42 @@ public class LogRestController extends BaseRestController {
                 }
             }
         });
-        parser.parse(cacheFile.getAbsolutePath());
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.TEXT_PLAIN);
-        headers.setContentLength(outFile.length());
-        headers.setContentDispositionFormData("attachment", outFile.getName());
         try {
-            InputStreamResource stream = new InputStreamResource(new FileInputStream(outFile));
-            return new ResponseEntity<>(stream, headers, HttpStatus.OK);
+            parser.parse(appId, VersionUtil.CRYPTO_UPDATE_2, new FileInputStream(cacheFile.getAbsolutePath()));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.TEXT_PLAIN);
+            headers.setContentLength(outFile.length());
+            headers.setContentDispositionFormData("attachment", outFile.getName());
+            try {
+                InputStreamResource stream = new InputStreamResource(new FileInputStream(outFile));
+                return new ResponseEntity<>(stream, headers, HttpStatus.OK);
+            } catch (FileNotFoundException e) {
+                throw new NotFoundException();
+            }
         } catch (FileNotFoundException e) {
+            try {
+                fileSender.release();
+            } catch (Exception ex) {
+                LOG.error("Exception", ex);
+            }
+            throw new InternalServerException();
+        }
+    }
+
+    @RequestMapping(value = "/api/log/attachment/{id}",
+            method = RequestMethod.GET,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public ResponseEntity<InputStreamResource> getAttachment(@PathVariable String id) {
+        Criteria criteria = Criteria.where("attachmentId").is(id);
+        WeedAttachFileMeta meta = mongoWeedAttachFileMetaRepository.findOneByCriteria(criteria);
+        if (meta != null) {
+            return weedRestController.getFile(meta.getFid());
+        } else {
             throw new NotFoundException();
         }
     }

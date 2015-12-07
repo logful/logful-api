@@ -33,9 +33,14 @@ public class MongoUserInfoRepository {
         return operations.findOne(query, UserInfo.class);
     }
 
-    public UserInfo save(UserInfo userInfo) {
-        operations.save(userInfo);
-        return userInfo;
+    public boolean save(UserInfo userInfo) {
+        userInfo.generateHashString();
+        try {
+            operations.save(userInfo);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public UserInfo findByUid(String uid) {

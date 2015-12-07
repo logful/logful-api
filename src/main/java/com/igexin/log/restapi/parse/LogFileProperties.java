@@ -33,6 +33,8 @@ public class LogFileProperties {
 
     private String originalFilename;
 
+    private int cryptoVersion;
+
     private String key;
 
     private String extension;
@@ -40,6 +42,14 @@ public class LogFileProperties {
     public LogFileProperties() {
         this.key = StringUtil.randomUid();
         this.extension = Constants.LOG_FILE_EXTENSION;
+    }
+
+    public int getCryptoVersion() {
+        return cryptoVersion;
+    }
+
+    public void setCryptoVersion(int cryptoVersion) {
+        this.cryptoVersion = cryptoVersion;
     }
 
     public String getExtension() {
@@ -149,6 +159,10 @@ public class LogFileProperties {
 
     public void setOriginalFilename(String originalFilename) {
         this.originalFilename = originalFilename;
+    }
+
+    public String cacheFilePath() {
+        return tempPath() + "/" + getFilename();
     }
 
     public String tempPath() {

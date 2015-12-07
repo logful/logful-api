@@ -124,7 +124,7 @@ public class ClientRestController {
 
         switch (VersionUtil.version(sdkVersion)) {
             case V1:
-                return v1UploadLogFile(platform, uid, appId, loggerName, layouts, level, alias, fileSum, logFile);
+                return v1UploadLogFile(platform, uid, appId, VersionUtil.CRYPTO_UPDATE_2, loggerName, layouts, level, alias, fileSum, logFile);
             default:
                 throw new BadRequestException("Unknown version!");
         }
@@ -261,7 +261,7 @@ public class ClientRestController {
             throw new BadRequestException();
         }
 
-        return v1UploadLogFile(platform, uid, appId, loggerName, layouts, level, alias, fileSum, logFile);
+        return v1UploadLogFile(platform, uid, appId, VersionUtil.CRYPTO_UPDATE_1, loggerName, layouts, level, alias, fileSum, logFile);
     }
 
     /**
@@ -295,17 +295,8 @@ public class ClientRestController {
     // ---------------------------------- Detail rest controller version function api ------------------------------ //
 
     private String v1UploadSystemInfo(final WebRequest webRequest) {
-        // Save user info to db.
         UserInfo info = UserInfo.create(webRequest);
-        UserInfo temp = mongoUserInfoRepository.findByUidAndAppId(info.getPlatform(), info.getUid(), info.getAppId());
-        if (temp != null) {
-            if (temp.hashCode() != info.hashCode()) {
-                info.setId(temp.getId());
-                mongoUserInfoRepository.save(info);
-            }
-        } else {
-            mongoUserInfoRepository.save(info);
-        }
+        mongoUserInfoRepository.save(info);
 
         Config config = mongoConfigRepository.read();
 
@@ -364,6 +355,7 @@ public class ClientRestController {
     private String v1UploadLogFile(String platform,
                                    String uid,
                                    String appId,
+                                   int cryptoVersion,
                                    String loggerName,
                                    String layouts,
                                    String level,
@@ -400,6 +392,7 @@ public class ClientRestController {
             properties.setPlatform(platform);
             properties.setUid(uid);
             properties.setAppId(appId);
+            properties.setCryptoVersion(cryptoVersion);
             properties.setLevel(Integer.parseInt(level));
             properties.setLoggerName(loggerName);
             properties.setAlias(alias);

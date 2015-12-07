@@ -8,9 +8,9 @@ import com.igexin.log.restapi.parse.GraylogClientService;
 import com.igexin.log.restapi.parse.LocalFileSender;
 import com.igexin.log.restapi.parse.LogFileParser;
 import com.igexin.log.restapi.util.ControllerUtil;
-import com.igexin.log.restapi.util.CryptoTool;
 import com.igexin.log.restapi.util.DateTimeUtil;
 import com.igexin.log.restapi.util.StringUtil;
+import com.igexin.log.restapi.util.VersionUtil;
 import com.igexin.log.restapi.weed.WeedFSClientService;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.json.JSONArray;
@@ -151,10 +151,7 @@ public class WebRestController {
         final LocalFileSender fileSender = LocalFileSender.create(outFile.getAbsolutePath());
         LogFileParser parser = new LogFileParser(new LogFileParser.ParserEventListener() {
             @Override
-            public void output(long timestamp, String encryptedTag, String encryptedMsg, short layoutId, int attachmentId) {
-                String tag = CryptoTool.decrypt(appId, encryptedTag);
-                String msg = CryptoTool.decrypt(appId, encryptedMsg);
-
+            public void output(long timestamp, String tag, String msg, short layoutId, int attachmentId) {
                 String line = String.format("%s%s%s%s%s",
                         DateTimeUtil.timeString(timestamp),
                         Constants.LOG_LINE_SEPARATOR,
@@ -176,7 +173,14 @@ public class WebRestController {
                 }
             }
         });
-        parser.parse(file.getAbsolutePath());
+
+        // TODO
+
+        try {
+            parser.parse(appId, VersionUtil.CRYPTO_UPDATE_2, new FileInputStream(outFile));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         String uri = Base64.encodeBase64String(filename.getBytes());
 

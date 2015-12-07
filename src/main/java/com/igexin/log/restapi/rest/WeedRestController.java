@@ -15,13 +15,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 @RestController
-public class WeedRestControler extends BaseRestController {
+public class WeedRestController extends BaseRestController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(WeedRestControler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WeedRestController.class);
 
     private OkHttpClient client = new OkHttpClient();
 
@@ -72,24 +71,25 @@ public class WeedRestControler extends BaseRestController {
         Request request = new Request.Builder().url(url).build();
         try {
             Response response = client.newCall(request).execute();
-            if (HttpStatus.valueOf(response.code()) == HttpStatus.OK) {
-                try {
-                    Headers headers = response.headers();
 
-                    HttpHeaders newHeaders = new HttpHeaders();
-                    newHeaders.set("Etag", headers.get("Etag"));
-                    newHeaders.set("Content-Type", headers.get("Content-Type"));
-                    newHeaders.set("Content-Disposition", headers.get("Content-Disposition"));
-                    InputStreamResource stream = new InputStreamResource(response.body().byteStream());
-                    return new ResponseEntity<>(stream, newHeaders, HttpStatus.OK);
-                } catch (FileNotFoundException e) {
-                    throw new NotFoundException();
-                }
+            HttpStatus code = HttpStatus.valueOf(response.code());
+            if (code == HttpStatus.OK) {
+                Headers headers = response.headers();
+
+                HttpHeaders newHeaders = new HttpHeaders();
+                newHeaders.set("Etag", headers.get("Etag"));
+                newHeaders.set("Content-Type", headers.get("Content-Type"));
+                newHeaders.set("Content-Disposition", headers.get("Content-Disposition"));
+                InputStreamResource stream = new InputStreamResource(response.body().byteStream());
+                return new ResponseEntity<>(stream, newHeaders, HttpStatus.OK);
+            } else if (code == HttpStatus.NOT_FOUND) {
+                throw new NotFoundException();
+            } else {
+                throw new InternalServerException();
             }
-        } catch (IOException e) {
-            LOG.error("Exception", e);
+        } catch (Exception e) {
+            throw new InternalServerException();
         }
-        throw new BadRequestException();
     }
 
     private String format(String url) {
@@ -105,6 +105,8 @@ public class WeedRestControler extends BaseRestController {
             Response response = client.newCall(request).execute();
             if (HttpStatus.valueOf(response.code()) == HttpStatus.OK) {
                 return response.body().string();
+            } else {
+                throw new InternalServerException();
             }
         } catch (IOException e) {
             LOG.error("Exception", e);
