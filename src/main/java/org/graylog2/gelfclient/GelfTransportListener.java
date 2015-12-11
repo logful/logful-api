@@ -1,6 +1,6 @@
 package org.graylog2.gelfclient;
 
-import com.igexin.log.restapi.entity.LogLine;
+import com.getui.logful.server.entity.LogLine;
 
 public interface GelfTransportListener {
 

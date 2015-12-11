@@ -16,7 +16,7 @@
 
 package org.graylog2.gelfclient.transport;
 
-import com.igexin.log.restapi.entity.LogLine;
+import com.getui.logful.server.entity.LogLine;
 import io.netty.channel.Channel;
 import org.graylog2.gelfclient.GelfMessage;
 import org.slf4j.Logger;
