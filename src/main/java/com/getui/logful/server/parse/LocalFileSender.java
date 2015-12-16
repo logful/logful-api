@@ -1,6 +1,6 @@
 package com.getui.logful.server.parse;
 
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,9 +62,9 @@ public class LocalFileSender implements SenderInterface {
     }
 
     @Override
-    public void send(LogLine logLine) {
+    public void send(LogMessage logMessage) {
         if (outputStream != null) {
-            String line = logLine.text() + "\n";
+            String line = logMessage.text() + "\n";
             try {
                 outputStream.write(line.getBytes());
             } catch (IOException e) {

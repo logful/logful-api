@@ -1,7 +1,7 @@
 package com.getui.logful.server.weed;
 
-import com.getui.logful.server.entity.WeedAttachFileMeta;
-import com.getui.logful.server.entity.WeedLogFileMeta;
+import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.LogFileMeta;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -36,16 +36,16 @@ public class WeedFSMeta {
 
     private byte[] response;
 
-    private WeedLogFileMeta logFileMeta;
+    private LogFileMeta logFileMeta;
 
-    private WeedAttachFileMeta attachFileMeta;
+    private AttachFileMeta attachFileMeta;
 
     public WeedFSMeta() {
         this.status = STATE_NORMAL;
         this.writeDate = new Date();
     }
 
-    public static WeedFSMeta create(String key, String extension, WeedLogFileMeta meta) {
+    public static WeedFSMeta create(String key, String extension, LogFileMeta meta) {
         WeedFSMeta weedFSMeta = new WeedFSMeta();
         weedFSMeta.type = TYPE_LOG;
         weedFSMeta.extension = extension;
@@ -54,7 +54,7 @@ public class WeedFSMeta {
         return weedFSMeta;
     }
 
-    public static WeedFSMeta create(String key, String extension, WeedAttachFileMeta meta) {
+    public static WeedFSMeta create(String key, String extension, AttachFileMeta meta) {
         WeedFSMeta weedFSMeta = new WeedFSMeta();
         weedFSMeta.type = TYPE_ATTACHMENT;
         weedFSMeta.key = key;
@@ -109,11 +109,11 @@ public class WeedFSMeta {
         this.extension = extension;
     }
 
-    public WeedLogFileMeta getLogFileMeta() {
+    public LogFileMeta getLogFileMeta() {
         return logFileMeta;
     }
 
-    public void setLogFileMeta(WeedLogFileMeta logFileMeta) {
+    public void setLogFileMeta(LogFileMeta logFileMeta) {
         this.logFileMeta = logFileMeta;
     }
 
@@ -125,11 +125,11 @@ public class WeedFSMeta {
         this.type = type;
     }
 
-    public WeedAttachFileMeta getAttachFileMeta() {
+    public AttachFileMeta getAttachFileMeta() {
         return attachFileMeta;
     }
 
-    public void setAttachFileMeta(WeedAttachFileMeta attachFileMeta) {
+    public void setAttachFileMeta(AttachFileMeta attachFileMeta) {
         this.attachFileMeta = attachFileMeta;
     }
 

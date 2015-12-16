@@ -48,10 +48,10 @@ public class WebRestController {
     private MongoControlProfileRepository mongoControlProfileRepository;
 
     @Autowired
-    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
+    private LogFileMetaRepository logFileMetaRepository;
 
     @Autowired
-    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+    private AttachFileMetaRepository attachFileMetaRepository;
 
     @Autowired
     private GraylogClientService graylogClientService;
@@ -256,10 +256,10 @@ public class WebRestController {
             criteria.and("appId").is(appId);
             criteria.and("date").is(date);
 
-            List<WeedLogFileMeta> fileMetaList = mongoWeedLogFileMetaRepository.findAllByCriteria(criteria);
+            List<LogFileMeta> fileMetaList = logFileMetaRepository.findAllByCriteria(criteria);
 
             JSONArray fileMetaArray = new JSONArray();
-            for (WeedLogFileMeta fileMeta : fileMetaList) {
+            for (LogFileMeta fileMeta : fileMetaList) {
                 JSONObject fileMetaObject = new JSONObject();
 
                 fileMetaObject.put("filename", fileMeta.originalFilename());
@@ -294,7 +294,7 @@ public class WebRestController {
             throw new BadRequestException();
         }
 
-        UserInfo info = UserInfo.create(webRequest);
+        ClientUser info = ClientUser.create(webRequest);
         Criteria criteria = Criteria.where("platform").is(info.getPlatform());
 
         addCriteria(criteria, "alias", info.getAlias());
@@ -311,10 +311,10 @@ public class WebRestController {
 
         addCriteria(criteria, "versionString", info.getVersionString());
 
-        List<UserInfo> userInfoList = mongoUserInfoRepository.findAllByCriteria(criteria);
+        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
         JSONArray jsonArray = new JSONArray();
-        for (UserInfo userInfo : userInfoList) {
-            JSONObject jsonObject = userInfo.toJsonObject();
+        for (ClientUser clientUser : clientUserList) {
+            JSONObject jsonObject = clientUser.toJsonObject();
             jsonArray.put(jsonObject);
         }
 
@@ -343,9 +343,9 @@ public class WebRestController {
         Criteria criteria = Criteria.where("platform").is(StringUtil.platformNumber(platform));
         criteria.and("uid").is(uid);
 
-        List<UserInfo> userInfoList = mongoUserInfoRepository.findAllByCriteria(criteria);
-        if (userInfoList.size() > 0) {
-            UserInfo first = userInfoList.get(0);
+        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
+        if (clientUserList.size() > 0) {
+            ClientUser first = clientUserList.get(0);
 
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("platform", StringUtil.platformString(first.getPlatform()));
@@ -357,7 +357,7 @@ public class WebRestController {
             jsonObject.put("osVersion", first.getOsVersion());
 
             JSONArray jsonArray = new JSONArray();
-            for (UserInfo info : userInfoList) {
+            for (ClientUser info : clientUserList) {
                 JSONObject object = new JSONObject();
                 object.put("appId", info.getAppId());
                 object.put("version", info.getVersion());
@@ -470,7 +470,7 @@ public class WebRestController {
     @ResponseBody
     public String getFidByAttachmentId(@PathVariable String id) {
         Criteria criteria = Criteria.where("attachmentId").is(id);
-        WeedAttachFileMeta meta = mongoWeedAttachFileMetaRepository.findOneByCriteria(criteria);
+        AttachFileMeta meta = attachFileMetaRepository.findOneByCriteria(criteria);
         if (meta != null) {
             JSONObject object = new JSONObject();
             object.put("fid", meta.getFid());

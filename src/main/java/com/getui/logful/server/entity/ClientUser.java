@@ -13,8 +13,8 @@ import org.springframework.web.context.request.WebRequest;
 
 import java.util.zip.CRC32;
 
-@Document(collection = "user_info")
-public class UserInfo {
+@Document(collection = "client_user")
+public class ClientUser {
 
     @Id
     private String id;
@@ -44,35 +44,35 @@ public class UserInfo {
     @Indexed(unique = true)
     private String hashString;
 
-    public static UserInfo create(WebRequest webRequest) {
-        UserInfo userInfo = new UserInfo();
-        userInfo.platform = StringUtil.platformNumber(webRequest.getParameter("platform"));
+    public static ClientUser create(WebRequest webRequest) {
+        ClientUser clientUser = new ClientUser();
+        clientUser.platform = StringUtil.platformNumber(webRequest.getParameter("platform"));
 
-        userInfo.uid = webRequest.getParameter("uid");
-        userInfo.alias = webRequest.getParameter("alias");
-        userInfo.model = webRequest.getParameter("model");
-        userInfo.imei = webRequest.getParameter("imei");
-        userInfo.macAddress = webRequest.getParameter("macAddress");
-        userInfo.osVersion = webRequest.getParameter("osVersion");
+        clientUser.uid = webRequest.getParameter("uid");
+        clientUser.alias = webRequest.getParameter("alias");
+        clientUser.model = webRequest.getParameter("model");
+        clientUser.imei = webRequest.getParameter("imei");
+        clientUser.macAddress = webRequest.getParameter("macAddress");
+        clientUser.osVersion = webRequest.getParameter("osVersion");
 
-        userInfo.appId = webRequest.getParameter("appId");
+        clientUser.appId = webRequest.getParameter("appId");
 
         String version = webRequest.getParameter("version");
         if (version != null && version.length() > 0) {
-            userInfo.version = Integer.parseInt(version);
+            clientUser.version = Integer.parseInt(version);
         }
 
-        userInfo.versionString = webRequest.getParameter("versionString");
+        clientUser.versionString = webRequest.getParameter("versionString");
 
-        if (!ControllerUtil.isEmpty(userInfo.getUid())) {
+        if (!ControllerUtil.isEmpty(clientUser.getUid())) {
             CRC32 crc32 = new CRC32();
-            crc32.update(userInfo.getUid().getBytes());
+            crc32.update(clientUser.getUid().getBytes());
             long crcValue = crc32.getValue();
 
-            userInfo.level = (int) (crcValue % 100);
+            clientUser.level = (int) (crcValue % 100);
         }
 
-        return userInfo;
+        return clientUser;
     }
 
     public void generateHashString() {

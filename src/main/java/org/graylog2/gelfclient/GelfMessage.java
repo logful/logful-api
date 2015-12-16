@@ -16,7 +16,7 @@
 
 package org.graylog2.gelfclient;
 
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +30,7 @@ public class GelfMessage {
     private final String host;
     private final String message;
     private String fullMessage;
-    private LogLine logLine;
+    private LogMessage logMessage;
     private double timestamp = System.currentTimeMillis() / 1000D;
     private GelfMessageLevel level = GelfMessageLevel.ALERT;
     private final Map<String, Object> additionalFields = new HashMap<>();
@@ -49,13 +49,14 @@ public class GelfMessage {
         this.version = version;
     }
 
-    public LogLine getLogLine() {
-        return logLine;
+    public LogMessage getLogMessage() {
+        return logMessage;
     }
 
-    public void setLogLine(LogLine logLine) {
-        this.logLine = logLine;
+    public void setLogMessage(LogMessage logMessage) {
+        this.logMessage = logMessage;
     }
+
 
     public GelfMessageVersion getVersion() {
         return version;

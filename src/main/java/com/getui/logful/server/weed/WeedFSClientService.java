@@ -1,10 +1,10 @@
 package com.getui.logful.server.weed;
 
 import com.getui.logful.server.LogfulProperties;
-import com.getui.logful.server.entity.WeedAttachFileMeta;
-import com.getui.logful.server.entity.WeedLogFileMeta;
-import com.getui.logful.server.mongod.MongoWeedAttachFileMetaRepository;
-import com.getui.logful.server.mongod.MongoWeedLogFileMetaRepository;
+import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.LogFileMeta;
+import com.getui.logful.server.mongod.AttachFileMetaRepository;
+import com.getui.logful.server.mongod.LogFileMetaRepository;
 import com.getui.logful.server.util.StringUtil;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -49,10 +49,10 @@ public class WeedFSClientService implements ChannelFutureListener {
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
+    private LogFileMetaRepository logFileMetaRepository;
 
     @Autowired
-    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+    private AttachFileMetaRepository attachFileMetaRepository;
 
     @Autowired
     private WeedQueueRepository weedQueueRepository;
@@ -83,17 +83,17 @@ public class WeedFSClientService implements ChannelFutureListener {
 
     @PostConstruct
     public void create() {
-        MongoOperations operations = mongoWeedLogFileMetaRepository.getOperations();
+        MongoOperations operations = logFileMetaRepository.getOperations();
         try {
             DBCollection collection;
 
             BasicDBObject index = new BasicDBObject("writeDate", 1);
             BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
 
-            collection = operations.getCollection(operations.getCollectionName(WeedLogFileMeta.class));
+            collection = operations.getCollection(operations.getCollectionName(LogFileMeta.class));
             collection.createIndex(index, options);
 
-            collection = operations.getCollection(operations.getCollectionName(WeedAttachFileMeta.class));
+            collection = operations.getCollection(operations.getCollectionName(AttachFileMeta.class));
             collection.createIndex(index, options);
 
             collection = operations.getCollection(operations.getCollectionName(WeedFSMeta.class));
@@ -145,8 +145,8 @@ public class WeedFSClientService implements ChannelFutureListener {
         String weedDir = logfulProperties.weedDir();
         final WeedFSWriteThread writeThread = new WeedFSWriteThread(uri, weedDir, weedQueueRepository, queue.writeQueue);
         final WeedFSReadThread readThread = new WeedFSReadThread(weedDir,
-                mongoWeedLogFileMetaRepository,
-                mongoWeedAttachFileMetaRepository,
+                logFileMetaRepository,
+                attachFileMetaRepository,
                 weedQueueRepository,
                 weedMetaMap,
                 queue.readQueue);

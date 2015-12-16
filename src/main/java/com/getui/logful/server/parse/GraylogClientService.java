@@ -5,8 +5,8 @@ import com.getui.logful.server.GlobalReference;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.entity.Layout;
 import com.getui.logful.server.entity.LayoutItem;
-import com.getui.logful.server.entity.LogLine;
-import com.getui.logful.server.mongod.MongoLogLineRepository;
+import com.getui.logful.server.entity.LogMessage;
+import com.getui.logful.server.mongod.MongoLogMessageRepository;
 import com.getui.logful.server.util.StringUtil;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -31,7 +31,7 @@ public class GraylogClientService implements SenderInterface {
     LogfulProperties logfulProperties;
 
     @Autowired
-    MongoLogLineRepository mongoLogLineRepository;
+    MongoLogMessageRepository mongoLogMessageRepository;
 
     private AtomicBoolean connected = new AtomicBoolean(false);
 
@@ -39,12 +39,12 @@ public class GraylogClientService implements SenderInterface {
 
     @PostConstruct
     public void create() {
-        MongoOperations operations = mongoLogLineRepository.getOperations();
+        MongoOperations operations = mongoLogMessageRepository.getOperations();
         try {
             BasicDBObject index = new BasicDBObject("writeDate", 1);
             BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
 
-            DBCollection collection = operations.getCollection(operations.getCollectionName(LogLine.class));
+            DBCollection collection = operations.getCollection(operations.getCollectionName(LogMessage.class));
             collection.createIndex(index, options);
         } catch (Exception e) {
             LOG.error("Exception", e);
@@ -82,16 +82,16 @@ public class GraylogClientService implements SenderInterface {
             }
 
             @Override
-            public void retrySuccessful(LogLine logLine) {
-                if (logLine.getId() != null && logLine.getId().length() > 0) {
-                    logLine.setStatus(LogLine.STATE_SUCCESSFUL);
-                    mongoLogLineRepository.save(logLine);
+            public void retrySuccessful(LogMessage logMessage) {
+                if (logMessage.getId() != null && logMessage.getId().length() > 0) {
+                    logMessage.setStatus(LogMessage.STATE_SUCCESSFUL);
+                    mongoLogMessageRepository.save(logMessage);
                 }
             }
 
             @Override
-            public void failed(LogLine logLine) {
-                mongoLogLineRepository.save(logLine);
+            public void failed(LogMessage logMessage) {
+                mongoLogMessageRepository.save(logMessage);
             }
         });
     }
@@ -100,19 +100,19 @@ public class GraylogClientService implements SenderInterface {
         return connected.get();
     }
 
-    public void write(LogLine logLine) {
+    public void write(LogMessage logMessage) {
         if (connected.get()) {
-            GelfMessage message = createMessage(logLine);
+            GelfMessage message = createMessage(logMessage);
             if (message != null) {
                 try {
                     write(message);
                 } catch (InterruptedException e) {
-                    mongoLogLineRepository.save(logLine);
+                    mongoLogMessageRepository.save(logMessage);
                     LOG.error("Exception", e);
                 }
             }
         } else {
-            mongoLogLineRepository.save(logLine);
+            mongoLogMessageRepository.save(logMessage);
         }
     }
 
@@ -121,8 +121,8 @@ public class GraylogClientService implements SenderInterface {
     }
 
     @Override
-    public void send(LogLine logLine) {
-        write(logLine);
+    public void send(LogMessage logMessage) {
+        write(logMessage);
     }
 
     @Override
@@ -130,35 +130,35 @@ public class GraylogClientService implements SenderInterface {
         // Nothing.
     }
 
-    public GelfMessage createMessage(LogLine logLine) {
+    public GelfMessage createMessage(LogMessage logMessage) {
         boolean formatError = false;
 
-        GelfMessageBuilder builder = new GelfMessageBuilder(logLine.getTag(), "127.0.0.1")
+        GelfMessageBuilder builder = new GelfMessageBuilder(logMessage.getTag(), "127.0.0.1")
                 .level(GelfMessageLevel.INFO);
-        GelfMessage message = builder.message(logLine.getMessage())
-                .timestamp(logLine.getTimestamp() / 1000D)
-                .additionalField("_tag", logLine.getTag())
-                .additionalField("_platform", logLine.getPlatform())
-                .additionalField("_uid", logLine.getUid())
-                .additionalField("_app_id", logLine.getAppId())
-                .additionalField("_log_level", logLine.getLevel())
-                .additionalField("_log_name", logLine.getLoggerName())
-                .additionalField("_log_timestamp", logLine.getTimestamp())
+        GelfMessage message = builder.message(logMessage.getMessage())
+                .timestamp(logMessage.getTimestamp() / 1000D)
+                .additionalField("_tag", logMessage.getTag())
+                .additionalField("_platform", logMessage.getPlatform())
+                .additionalField("_uid", logMessage.getUid())
+                .additionalField("_app_id", logMessage.getAppId())
+                .additionalField("_log_level", logMessage.getLevel())
+                .additionalField("_log_name", logMessage.getLoggerName())
+                .additionalField("_log_timestamp", logMessage.getTimestamp())
                 .build();
 
-        String attachment = logLine.getAttachment();
+        String attachment = logMessage.getAttachment();
         if (!StringUtil.isEmpty(attachment)) {
             message.addAdditionalField("_attachment", attachment);
         }
 
         // 别名字段
-        String alias = logLine.getAlias();
+        String alias = logMessage.getAlias();
         if (alias != null && alias.length() > 0) {
             message.addAdditionalField("_alias", alias);
         }
 
-        String msg = logLine.getMessage();
-        String template = logLine.getMsgLayout();
+        String msg = logMessage.getMessage();
+        String template = logMessage.getMsgLayout();
 
         if (msg.contains("|")) {
             // 包含 "|"
@@ -245,7 +245,6 @@ public class GraylogClientService implements SenderInterface {
         if (!formatError) {
             return message;
         }
-
         return null;
     }
 

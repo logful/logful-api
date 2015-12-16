@@ -1,9 +1,9 @@
 package com.getui.logful.server.weed;
 
-import com.getui.logful.server.entity.WeedAttachFileMeta;
-import com.getui.logful.server.entity.WeedLogFileMeta;
-import com.getui.logful.server.mongod.MongoWeedAttachFileMetaRepository;
-import com.getui.logful.server.mongod.MongoWeedLogFileMetaRepository;
+import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.LogFileMeta;
+import com.getui.logful.server.mongod.AttachFileMetaRepository;
+import com.getui.logful.server.mongod.LogFileMetaRepository;
 import com.getui.logful.server.util.StringUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -25,8 +25,8 @@ public class WeedFSReadThread {
     private final Thread handlerThread;
 
     public WeedFSReadThread(final String dirPath,
-                            final MongoWeedLogFileMetaRepository logRepository,
-                            final MongoWeedAttachFileMetaRepository attachRepository,
+                            final LogFileMetaRepository logRepository,
+                            final AttachFileMetaRepository attachRepository,
                             final WeedQueueRepository queueRepository,
                             final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap,
                             final BlockingQueue<WeedFSMeta> queue) {
@@ -60,7 +60,7 @@ public class WeedFSReadThread {
                                         if (meta != null) {
                                             if (meta.getType() == WeedFSMeta.TYPE_LOG) {
                                                 // Log file.
-                                                WeedLogFileMeta logFileMeta = meta.getLogFileMeta();
+                                                LogFileMeta logFileMeta = meta.getLogFileMeta();
                                                 if (logFileMeta != null) {
                                                     logFileMeta.setFid(fid);
                                                     logFileMeta.setSize(size);
@@ -70,7 +70,7 @@ public class WeedFSReadThread {
                                                 }
                                             } else if (meta.getType() == WeedFSMeta.TYPE_ATTACHMENT) {
                                                 // Attachment file.
-                                                WeedAttachFileMeta attachFileMeta = meta.getAttachFileMeta();
+                                                AttachFileMeta attachFileMeta = meta.getAttachFileMeta();
                                                 if (attachFileMeta != null) {
                                                     attachFileMeta.setFid(fid);
                                                     attachFileMeta.setSize(size);

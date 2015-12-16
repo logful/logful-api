@@ -1,6 +1,6 @@
 package org.graylog2.gelfclient;
 
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 
 public interface GelfTransportListener {
 
@@ -8,7 +8,7 @@ public interface GelfTransportListener {
 
     void disconnected();
 
-    void retrySuccessful(LogLine logLine);
+    void retrySuccessful(LogMessage logMessage);
 
-    void failed(LogLine logLine);
+    void failed(LogMessage logMessage);
 }

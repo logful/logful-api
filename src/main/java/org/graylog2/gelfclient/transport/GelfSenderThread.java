@@ -16,7 +16,7 @@
 
 package org.graylog2.gelfclient.transport;
 
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 import io.netty.channel.Channel;
 import org.graylog2.gelfclient.GelfMessage;
 import org.slf4j.Logger;
@@ -34,9 +34,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class GelfSenderThread {
 
     public interface GelfSenderThreadListener {
-        void retrySuccessful(LogLine logLine);
+        void retrySuccessful(LogMessage logMessage);
 
-        void failed(LogLine logLine);
+        void failed(LogMessage logMessage);
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(GelfSenderThread.class);
@@ -94,17 +94,17 @@ public class GelfSenderThread {
                                     // will take care of encoding.
                                     channel.writeAndFlush(gelfMessage);
                                     if (listener != null) {
-                                        LogLine logLine = gelfMessage.getLogLine();
+                                        LogMessage logMessage = gelfMessage.getLogMessage();
                                         // Retry send the GELF message successful
-                                        if (logLine != null && logLine.getId() != null && logLine.getId().length() > 0) {
-                                            listener.retrySuccessful(logLine);
+                                        if (logMessage != null && logMessage.getId() != null && logMessage.getId().length() > 0) {
+                                            listener.retrySuccessful(logMessage);
                                         }
                                     }
                                     gelfMessage = null;
                                 } else {
                                     // Send the GELF message failed
                                     if (listener != null) {
-                                        listener.failed(gelfMessage.getLogLine());
+                                        listener.failed(gelfMessage.getLogMessage());
                                     }
                                 }
                             }

@@ -2,10 +2,10 @@ package com.getui.logful.server.rest;
 
 import com.getui.logful.server.Constants;
 import com.getui.logful.server.LogfulProperties;
-import com.getui.logful.server.entity.WeedAttachFileMeta;
-import com.getui.logful.server.entity.WeedLogFileMeta;
-import com.getui.logful.server.mongod.MongoWeedAttachFileMetaRepository;
-import com.getui.logful.server.mongod.MongoWeedLogFileMetaRepository;
+import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.LogFileMeta;
+import com.getui.logful.server.mongod.AttachFileMetaRepository;
+import com.getui.logful.server.mongod.LogFileMetaRepository;
 import com.getui.logful.server.parse.LocalFileSender;
 import com.getui.logful.server.parse.LogFileParser;
 import com.getui.logful.server.util.*;
@@ -39,10 +39,10 @@ public class LogRestController extends BaseRestController {
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoWeedLogFileMetaRepository mongoWeedLogFileMetaRepository;
+    private LogFileMetaRepository logFileMetaRepository;
 
     @Autowired
-    private MongoWeedAttachFileMetaRepository mongoWeedAttachFileMetaRepository;
+    private AttachFileMetaRepository attachFileMetaRepository;
 
     @Autowired
     private WeedRestController weedRestController;
@@ -67,10 +67,10 @@ public class LogRestController extends BaseRestController {
             criteria.and("appId").is(appId);
             criteria.and("date").is(date);
 
-            List<WeedLogFileMeta> fileMetaList = mongoWeedLogFileMetaRepository.findAllByCriteria(criteria);
+            List<LogFileMeta> fileMetaList = logFileMetaRepository.findAllByCriteria(criteria);
 
             JSONArray array = new JSONArray();
-            for (WeedLogFileMeta fileMeta : fileMetaList) {
+            for (LogFileMeta fileMeta : fileMetaList) {
                 JSONObject fileMetaObject = new JSONObject();
 
                 fileMetaObject.put("filename", fileMeta.originalFilename());
@@ -171,7 +171,7 @@ public class LogRestController extends BaseRestController {
     @ResponseBody
     public ResponseEntity<InputStreamResource> getAttachment(@PathVariable String id) {
         Criteria criteria = Criteria.where("attachmentId").is(id);
-        WeedAttachFileMeta meta = mongoWeedAttachFileMetaRepository.findOneByCriteria(criteria);
+        AttachFileMeta meta = attachFileMetaRepository.findOneByCriteria(criteria);
         if (meta != null) {
             return weedRestController.getFile(meta.getFid());
         } else {

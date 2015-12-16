@@ -1,7 +1,7 @@
 package com.getui.logful.server.parse;
 
 import com.getui.logful.server.Constants;
-import com.getui.logful.server.entity.WeedLogFileMeta;
+import com.getui.logful.server.entity.LogFileMeta;
 import com.getui.logful.server.util.StringUtil;
 import com.getui.logful.server.weed.WeedFSMeta;
 import org.json.JSONArray;
@@ -190,7 +190,7 @@ public class LogFileProperties {
         String date = temp[1];
         try {
             int fragment = Integer.parseInt(temp[3]);
-            WeedLogFileMeta meta = WeedLogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
+            LogFileMeta meta = LogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
                     appId, loggerName, date, (short) level, fragment);
             return WeedFSMeta.create(key, extension, meta);
         } catch (Exception e) {

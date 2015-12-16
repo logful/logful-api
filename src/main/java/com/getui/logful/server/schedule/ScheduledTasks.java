@@ -1,8 +1,8 @@
 package com.getui.logful.server.schedule;
 
 import com.getui.logful.server.LogfulProperties;
-import com.getui.logful.server.entity.LogLine;
-import com.getui.logful.server.mongod.MongoLogLineRepository;
+import com.getui.logful.server.entity.LogMessage;
+import com.getui.logful.server.mongod.MongoLogMessageRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.weed.WeedFSClientService;
 import com.getui.logful.server.weed.WeedFSMeta;
@@ -36,7 +36,7 @@ public class ScheduledTasks {
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoLogLineRepository mongoLogLineRepository;
+    private MongoLogMessageRepository mongoLogMessageRepository;
 
     @Autowired
     private WeedQueueRepository weedQueueRepository;
@@ -55,9 +55,9 @@ public class ScheduledTasks {
         weedFSClientService.resetServerError();
 
         if (graylogClientService.isConnected()) {
-            List<LogLine> logLineList = mongoLogLineRepository.findAllNotSendLimit(PAGE_LIMIT);
-            for (LogLine logLine : logLineList) {
-                graylogClientService.send(logLine);
+            List<LogMessage> list = mongoLogMessageRepository.findAllNotSendLimit(PAGE_LIMIT);
+            for (LogMessage logMessage : list) {
+                graylogClientService.send(logMessage);
             }
         }
 

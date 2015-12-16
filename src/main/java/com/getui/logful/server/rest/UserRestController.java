@@ -1,6 +1,6 @@
 package com.getui.logful.server.rest;
 
-import com.getui.logful.server.entity.UserInfo;
+import com.getui.logful.server.entity.ClientUser;
 import com.getui.logful.server.mongod.MongoUserInfoRepository;
 import com.getui.logful.server.util.ControllerUtil;
 import com.getui.logful.server.util.StringUtil;
@@ -15,7 +15,7 @@ import org.springframework.web.context.request.WebRequest;
 import java.util.List;
 
 @RestController
-public class UidRestController extends BaseRestController {
+public class UserRestController extends BaseRestController {
 
     @Autowired
     private MongoUserInfoRepository mongoUserInfoRepository;
@@ -32,7 +32,7 @@ public class UidRestController extends BaseRestController {
             throw new NotAcceptableException();
         }
 
-        UserInfo info = UserInfo.create(webRequest);
+        ClientUser info = ClientUser.create(webRequest);
         Criteria criteria = Criteria.where("platform").is(info.getPlatform());
 
         addCriteria(criteria, "alias", info.getAlias());
@@ -49,10 +49,10 @@ public class UidRestController extends BaseRestController {
 
         addCriteria(criteria, "versionString", info.getVersionString());
 
-        List<UserInfo> userInfoList = mongoUserInfoRepository.findAllByCriteria(criteria);
+        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
         JSONArray jsonArray = new JSONArray();
-        for (UserInfo userInfo : userInfoList) {
-            JSONObject jsonObject = userInfo.toJsonObject();
+        for (ClientUser clientUser : clientUserList) {
+            JSONObject jsonObject = clientUser.toJsonObject();
             jsonArray.put(jsonObject);
         }
 
@@ -67,9 +67,9 @@ public class UidRestController extends BaseRestController {
     @ResponseBody
     public String viewUser(@PathVariable String uid) {
         Criteria criteria = Criteria.where("uid").is(uid);
-        List<UserInfo> userInfoList = mongoUserInfoRepository.findAllByCriteria(criteria);
-        if (userInfoList.size() > 0) {
-            UserInfo first = userInfoList.get(0);
+        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
+        if (clientUserList.size() > 0) {
+            ClientUser first = clientUserList.get(0);
 
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("platform", StringUtil.platformString(first.getPlatform()));
@@ -81,7 +81,7 @@ public class UidRestController extends BaseRestController {
             jsonObject.put("osVersion", first.getOsVersion());
 
             JSONArray jsonArray = new JSONArray();
-            for (UserInfo info : userInfoList) {
+            for (ClientUser info : clientUserList) {
                 JSONObject object = new JSONObject();
                 object.put("appId", info.getAppId());
                 object.put("version", info.getVersion());

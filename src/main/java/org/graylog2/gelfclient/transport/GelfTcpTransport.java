@@ -16,7 +16,7 @@
 
 package org.graylog2.gelfclient.transport;
 
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
@@ -145,18 +145,18 @@ public class GelfTcpTransport extends AbstractGelfTransport implements GelfSende
     }
 
     @Override
-    public void retrySuccessful(LogLine logLine) {
+    public void retrySuccessful(LogMessage logMessage) {
         GelfTransportListener listener = listener();
         if (listener != null) {
-            listener.retrySuccessful(logLine);
+            listener.retrySuccessful(logMessage);
         }
     }
 
     @Override
-    public void failed(LogLine logLine) {
+    public void failed(LogMessage logMessage) {
         GelfTransportListener listener = listener();
         if (listener != null) {
-            listener.failed(logLine);
+            listener.failed(logMessage);
         }
     }
 }

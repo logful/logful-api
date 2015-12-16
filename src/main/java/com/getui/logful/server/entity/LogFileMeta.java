@@ -6,8 +6,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
-@Document(collection = "weed_log_file_meta")
-public class WeedLogFileMeta {
+@Document(collection = "log_file_meta")
+public class LogFileMeta {
 
     @Id
     private String id;
@@ -32,14 +32,14 @@ public class WeedLogFileMeta {
 
     private Date writeDate;
 
-    public static WeedLogFileMeta create(short platform,
+    public static LogFileMeta create(short platform,
                                          String uid,
                                          String appId,
                                          String loggerName,
                                          String date,
                                          short level,
                                          int fragment) {
-        WeedLogFileMeta meta = new WeedLogFileMeta();
+        LogFileMeta meta = new LogFileMeta();
         meta.setPlatform(platform);
         meta.setUid(uid);
         meta.setAppId(appId);

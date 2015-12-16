@@ -12,10 +12,6 @@ public class LayoutItem {
 
     private int type;
 
-    public LayoutItem() {
-
-    }
-
     public static LayoutItem create(String abbr, String full, int type) {
         LayoutItem item = new LayoutItem();
         item.setAbbreviation(abbr);

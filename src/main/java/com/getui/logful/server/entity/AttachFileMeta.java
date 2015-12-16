@@ -5,8 +5,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
-@Document(collection = "weed_attachment_file_meta")
-public class WeedAttachFileMeta {
+@Document(collection = "attach_file_meta")
+public class AttachFileMeta {
 
     @Id
     private String id;
@@ -19,8 +19,8 @@ public class WeedAttachFileMeta {
 
     private long size;
 
-    public static WeedAttachFileMeta create(String attachmentId) {
-        WeedAttachFileMeta meta = new WeedAttachFileMeta();
+    public static AttachFileMeta create(String attachmentId) {
+        AttachFileMeta meta = new AttachFileMeta();
         meta.setAttachmentId(attachmentId);
         meta.setWriteDate(new Date());
         return meta;

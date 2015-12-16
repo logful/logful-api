@@ -1,7 +1,7 @@
 package com.getui.logful.server.mongod;
 
 import com.getui.logful.server.entity.ControlProfile;
-import com.getui.logful.server.entity.UserInfo;
+import com.getui.logful.server.entity.ClientUser;
 import com.getui.logful.server.util.StringUtil;
 import com.mongodb.WriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +56,7 @@ public class MongoControlProfileRepository {
         return operations.findOne(query, ControlProfile.class);
     }
 
-    public List<ControlProfile> findAllByUser(UserInfo info) {
+    public List<ControlProfile> findAllByUser(ClientUser info) {
         int platform = info.getPlatform();
         String uid = info.getUid();
         String alias = info.getAlias();

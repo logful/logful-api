@@ -1,7 +1,7 @@
 package com.getui.logful.server.parse;
 
 import com.getui.logful.server.Constants;
-import com.getui.logful.server.entity.LogLine;
+import com.getui.logful.server.entity.LogMessage;
 import com.getui.logful.server.util.StringUtil;
 import com.getui.logful.server.weed.WeedFSClientService;
 import com.getui.logful.server.weed.WeedFSMeta;
@@ -73,11 +73,11 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
         if (attachmentId != -1) {
             attachment = StringUtil.attachmentKey(platform, uid, appId, String.valueOf(attachmentId));
         }
-        LogLine logLine = LogLine.create(platform, uid, appId,
+        LogMessage logMessage = LogMessage.create(platform, uid, appId,
                 name, layout, level, timestamp, tag, msg, alias,
                 attachment);
         for (SenderInterface sender : senderList) {
-            sender.send(logLine);
+            sender.send(logMessage);
         }
     }
 

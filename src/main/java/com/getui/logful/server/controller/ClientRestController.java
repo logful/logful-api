@@ -3,8 +3,8 @@ package com.getui.logful.server.controller;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.entity.Config;
 import com.getui.logful.server.entity.ControlProfile;
-import com.getui.logful.server.entity.UserInfo;
-import com.getui.logful.server.entity.WeedAttachFileMeta;
+import com.getui.logful.server.entity.ClientUser;
+import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.mongod.MongoConfigRepository;
 import com.getui.logful.server.mongod.MongoControlProfileRepository;
 import com.getui.logful.server.mongod.MongoUserInfoRepository;
@@ -57,18 +57,13 @@ public class ClientRestController {
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
-    /**
-     * Upload system info.
-     *
-     * @param webRequest WebRequest
-     * @return Config response
-     */
     @RequestMapping(value = "/log/info/upload",
             method = RequestMethod.POST,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
-    public String uploadSystemInfo(final WebRequest webRequest) {
+    public String verifyClientUser(@RequestBody String payload) {
+        /*
         String platform = webRequest.getParameter("platform");
         if (!ControllerUtil.checkPlatform(platform)) {
             throw new BadRequestException();
@@ -84,7 +79,9 @@ public class ClientRestController {
                 return v1UploadSystemInfo(webRequest);
             default:
                 throw new BadRequestException("Unknown version!");
-        }
+        }*/
+        // TODO return rsa public key and profile
+        return "{}";
     }
 
     /**
@@ -295,7 +292,7 @@ public class ClientRestController {
     // ---------------------------------- Detail rest controller version function api ------------------------------ //
 
     private String v1UploadSystemInfo(final WebRequest webRequest) {
-        UserInfo info = UserInfo.create(webRequest);
+        ClientUser info = ClientUser.create(webRequest);
         mongoUserInfoRepository.save(info);
 
         Config config = mongoConfigRepository.read();
@@ -467,7 +464,7 @@ public class ClientRestController {
                         throw new ServerException();
                     }
                     // Write attachment file to weed fs.
-                    weedFSClientService.write(WeedFSMeta.create(key, extension, WeedAttachFileMeta.create(key)));
+                    weedFSClientService.write(WeedFSMeta.create(key, extension, AttachFileMeta.create(key)));
                 } catch (IOException e) {
                     throw new ServerException();
                 }

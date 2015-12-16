@@ -9,8 +9,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
-@Document(collection = "log_line")
-public class LogLine {
+@Document(collection = "log_message")
+public class LogMessage {
 
     public static final int STATE_NORMAL = 0x01;
 
@@ -57,29 +57,29 @@ public class LogLine {
 
     private Date writeDate;
 
-    public LogLine() {
+    public LogMessage() {
         this.status = STATE_NORMAL;
     }
 
-    public static LogLine create(String platform, String uid, String appId,
-                                 String loggerName, String msgLayout,
-                                 int level, long timestamp, String tag,
-                                 String msg, String alias, String attachment) {
-        LogLine logLine = new LogLine();
-        logLine.setPlatform(platform);
-        logLine.setUid(uid);
-        logLine.setAppId(appId);
-        logLine.setLoggerName(loggerName);
-        logLine.setMsgLayout(msgLayout);
-        logLine.setLevel(level);
-        logLine.setTimestamp(timestamp);
-        logLine.setTag(tag);
-        logLine.setMessage(msg);
-        logLine.setStatus(STATE_NORMAL);
-        logLine.setAlias(alias);
-        logLine.setAttachment(attachment);
-        logLine.setWriteDate(new Date());
-        return logLine;
+    public static LogMessage create(String platform, String uid, String appId,
+                                    String loggerName, String msgLayout,
+                                    int level, long timestamp, String tag,
+                                    String msg, String alias, String attachment) {
+        LogMessage logMessage = new LogMessage();
+        logMessage.setPlatform(platform);
+        logMessage.setUid(uid);
+        logMessage.setAppId(appId);
+        logMessage.setLoggerName(loggerName);
+        logMessage.setMsgLayout(msgLayout);
+        logMessage.setLevel(level);
+        logMessage.setTimestamp(timestamp);
+        logMessage.setTag(tag);
+        logMessage.setMessage(msg);
+        logMessage.setStatus(STATE_NORMAL);
+        logMessage.setAlias(alias);
+        logMessage.setAttachment(attachment);
+        logMessage.setWriteDate(new Date());
+        return logMessage;
     }
 
     public Date getWriteDate() {
@@ -142,7 +142,7 @@ public class LogLine {
         return level;
     }
 
-    public LogLine setLevel(int level) {
+    public LogMessage setLevel(int level) {
         this.level = level;
         return this;
     }
@@ -151,7 +151,7 @@ public class LogLine {
         return timestamp;
     }
 
-    public LogLine setTimestamp(long timestamp) {
+    public LogMessage setTimestamp(long timestamp) {
         this.timestamp = timestamp;
         return this;
     }
@@ -160,7 +160,7 @@ public class LogLine {
         return tag;
     }
 
-    public LogLine setTag(String tag) {
+    public LogMessage setTag(String tag) {
         this.tag = tag;
         return this;
     }
@@ -169,7 +169,7 @@ public class LogLine {
         return message;
     }
 
-    public LogLine setMessage(String message) {
+    public LogMessage setMessage(String message) {
         this.message = message;
         return this;
     }

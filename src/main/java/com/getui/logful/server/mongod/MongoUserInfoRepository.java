@@ -1,6 +1,6 @@
 package com.getui.logful.server.mongod;
 
-import com.getui.logful.server.entity.UserInfo;
+import com.getui.logful.server.entity.ClientUser;
 import com.mongodb.WriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoOperations;
@@ -20,48 +20,48 @@ public class MongoUserInfoRepository {
         this.operations = operations;
     }
 
-    public UserInfo findById(String id) {
+    public ClientUser findById(String id) {
         Query query = new Query(Criteria.where("_id").is(id));
-        return operations.findOne(query, UserInfo.class);
+        return operations.findOne(query, ClientUser.class);
     }
 
-    public UserInfo findByUidAndAppId(int platform, String uid, String appId) {
+    public ClientUser findByUidAndAppId(int platform, String uid, String appId) {
         Criteria criteria = Criteria.where("platform").is(platform)
                 .and("uid").is(uid)
                 .and("appId").is(appId);
         Query query = new Query(criteria);
-        return operations.findOne(query, UserInfo.class);
+        return operations.findOne(query, ClientUser.class);
     }
 
-    public boolean save(UserInfo userInfo) {
-        userInfo.generateHashString();
+    public boolean save(ClientUser clientUser) {
+        clientUser.generateHashString();
         try {
-            operations.save(userInfo);
+            operations.save(clientUser);
             return true;
         } catch (Exception e) {
             return false;
         }
     }
 
-    public UserInfo findByUid(String uid) {
+    public ClientUser findByUid(String uid) {
         Criteria criteria = Criteria.where("uid").is(uid);
         Query query = new Query(criteria);
-        return operations.findOne(query, UserInfo.class);
+        return operations.findOne(query, ClientUser.class);
     }
 
-    public boolean delete(UserInfo userInfo) {
-        Query query = new Query(Criteria.where("_id").is(userInfo.getId()));
-        WriteResult writeResult = operations.remove(query, UserInfo.class);
+    public boolean delete(ClientUser clientUser) {
+        Query query = new Query(Criteria.where("_id").is(clientUser.getId()));
+        WriteResult writeResult = operations.remove(query, ClientUser.class);
         return writeResult.getN() > 0;
     }
 
-    public List<UserInfo> findAll() {
-        return operations.findAll(UserInfo.class);
+    public List<ClientUser> findAll() {
+        return operations.findAll(ClientUser.class);
     }
 
-    public List<UserInfo> findAllByCriteria(Criteria criteria) {
+    public List<ClientUser> findAllByCriteria(Criteria criteria) {
         Query query = new Query(criteria);
-        return operations.find(query, UserInfo.class);
+        return operations.find(query, ClientUser.class);
     }
 
 }
