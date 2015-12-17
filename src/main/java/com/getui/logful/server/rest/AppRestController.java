@@ -1,15 +1,27 @@
 package com.getui.logful.server.rest;
 
+import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.mongod.ApplicationRepository;
 import com.getui.logful.server.util.ControllerUtil;
+import com.getui.logful.server.util.RSAUtil;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
+import java.security.KeyPair;
+import java.util.Date;
+import java.util.UUID;
+
 @RestController
 public class AppRestController extends BaseRestController {
+
+    @Autowired
+    LogfulProperties logfulProperties;
 
     @Autowired
     ApplicationRepository applicationRepository;
@@ -39,26 +51,42 @@ public class AppRestController extends BaseRestController {
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public String createApp(@RequestBody String payload) {
-        SimpleClientDetails simpleClientDetails = new SimpleClientDetails();
-        applicationRepository.save(simpleClientDetails);
-        /*
-        if (StringUtils.isEmpty(application.getName()) || StringUtils.isEmpty(application.getAppId())) {
+        // TODO scope create app.
+        try {
+            JSONObject object = new JSONObject(payload);
+            String name = object.optString("name");
+            String appId = object.getString("appId");
+            if (!StringUtils.isEmpty(name) && !StringUtils.isEmpty(appId)) {
+                SimpleClientDetails simpleClientDetails = new SimpleClientDetails();
+
+                simpleClientDetails.setAccessTokenValiditySeconds(logfulProperties.getAccessTokenValiditySeconds());
+                simpleClientDetails.setRefreshTokenValiditySeconds(logfulProperties.getRefreshTokenValiditySeconds());
+
+                simpleClientDetails.setName(name);
+                simpleClientDetails.setAppId(appId);
+                simpleClientDetails.setCreateDate(new Date());
+
+                simpleClientDetails.authorizedGrantTypes("refresh_token", "client_credentials");
+                simpleClientDetails.authorities("logful_client");
+                simpleClientDetails.scopes("client");
+
+                String key = key(simpleClientDetails);
+                String secret = secret(simpleClientDetails);
+
+                simpleClientDetails.setClientId(key);
+                simpleClientDetails.setClientSecret(secret);
+
+                KeyPair keyPair = RSAUtil.generateKeyPair();
+                simpleClientDetails.addKeyPair(keyPair);
+
+                applicationRepository.save(simpleClientDetails);
+                return created();
+            } else {
+                throw new BadRequestException();
+            }
+        } catch (Exception e) {
             throw new BadRequestException();
         }
-        application.setCreateTime(System.currentTimeMillis());
-        try {
-            KeyPair keyPair = RSAUtil.generateKeyPair();
-            application.setKey(uid(application));
-            application.setSecret(uid(application));
-            application.setPublicKey(keyPair.getPublic().getEncoded());
-            application.setPrivateKey(keyPair.getPrivate().getEncoded());
-            applicationRepository.save(application);
-            return created();
-        } catch (Exception e) {
-            throw new InternalServerException();
-        }
-        */
-        return "{}";
     }
 
     @RequestMapping(value = "/api/app/{id}",
@@ -93,7 +121,13 @@ public class AppRestController extends BaseRestController {
         return null;
     }
 
-    private String uid(SimpleClientDetails clientDetails) {
+    private String key(SimpleClientDetails clientDetails) {
+        String[] parts = {UUID.randomUUID().toString(),
+                "RANDOM-spWzPXTGL8lT6OlNMoqu3e4GWs2L7uhR",
+                clientDetails.getName(),
+                clientDetails.getAppId(),
+                String.valueOf(clientDetails.getCreateDate().getTime())};
+        return DigestUtils.md5Hex(StringUtils.join(parts, "").getBytes());
         /*
         String[] parts = {UUID.randomUUID().toString(),
                 application.getName(),
@@ -101,7 +135,15 @@ public class AppRestController extends BaseRestController {
                 String.valueOf(application.getCreateTime())};
         return DigestUtils.md5Hex(ArrayUtils.addAll(StringUtils.join(parts, "").getBytes(), application.getPublicKey()));
         */
-        return "";
+    }
+
+    private String secret(SimpleClientDetails clientDetails) {
+        String[] parts = {UUID.randomUUID().toString(),
+                "RANDOM-Xbu88x2VQn2jwTs5GBPnHKlafK5ACpjJ",
+                clientDetails.getName(),
+                clientDetails.getAppId(),
+                String.valueOf(clientDetails.getCreateDate().getTime())};
+        return DigestUtils.md5Hex(StringUtils.join(parts, "").getBytes());
     }
 
 }

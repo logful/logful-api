@@ -1,55 +1,58 @@
 package com.getui.logful.server.auth.model;
 
+import com.getui.logful.server.util.RSAUtil;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.security.oauth2.provider.ClientDetails;
 import org.springframework.security.oauth2.provider.client.BaseClientDetails;
 
+import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.*;
 
 @Document(collection = "oauth2_client")
 public class SimpleClientDetails {
 
-    private static final String[] GRANT_TYPE = new String[]{"refresh_token", "client_credentials"};
-
     @Id
     private String id;
+
+    private String name;
+
+    private String appId;
+    private Date createDate;
+    private Date updateDate;
     @Indexed
     private String clientId;
-    private Set<String> resourceIds;
+    private Set<String> resourceIds = new HashSet<>();
     private boolean secretRequired;
     @Indexed
     private String clientSecret;
     private boolean scoped;
-    private Set<String> scope;
-    private Set<String> authorizedGrantTypes;
-    private Set<String> registeredRedirectUri;
-    private Collection<String> authorities;
+    private Set<String> scope = new HashSet<>();
+    private Set<String> authorizedGrantTypes = new HashSet<>();
+    private Set<String> registeredRedirectUri = new HashSet<>();
+    private Collection<String> authorities = new LinkedHashSet<>();
     private Integer accessTokenValiditySeconds;
     private Integer refreshTokenValiditySeconds;
     private boolean autoApprove;
-    private Map<String, Object> additionalInformation;
+    private Map<String, Object> additionalInformation = new LinkedHashMap<>();
 
     public SimpleClientDetails() {
         BaseClientDetails temp = new BaseClientDetails();
-
-        this.clientId = "525b8747323d49078a96e49f0189de98";
-        this.authorizedGrantTypes = new HashSet<>(Arrays.asList(GRANT_TYPE));
-
         this.setAccessTokenValiditySeconds(temp.getAccessTokenValiditySeconds());
         this.setRefreshTokenValiditySeconds(temp.getRefreshTokenValiditySeconds());
 
-        this.registeredRedirectUri = new HashSet<>();
+        // this.registeredRedirectUri = new HashSet<>();
 
-        this.clientSecret = "02ce8e2adba94ae5a4807e3f12ea34f3";
-        this.scope = new HashSet<>(Arrays.asList(new String[]{"client"}));
-        this.authorities = new HashSet<>(Arrays.asList(new String[]{"logful_client"}));
+        // this.scope.addAll(Arrays.asList(new String[]{"client"}));
+        // this.authorities.addAll(Arrays.asList(new String[]{"logful_client"}));
 
         // TODO
-        this.resourceIds = new HashSet<>();
+        // this.resourceIds = new HashSet<>();
 
-        this.setAdditionalInformation(new HashMap<String, Object>());
+        //this.setAdditionalInformation(new HashMap<String, Object>());
     }
 
     public SimpleClientDetails(ClientDetails clientDetails) {
@@ -65,6 +68,65 @@ public class SimpleClientDetails {
         this.scoped = clientDetails.isScoped();
         this.secretRequired = clientDetails.isSecretRequired();
         // this.id = clientDetails.getClientId();
+    }
+
+    public Date getCreateDate() {
+        return createDate;
+    }
+
+    public void setCreateDate(Date createDate) {
+        this.createDate = createDate;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAppId() {
+        return appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
+    }
+
+    public Date getUpdateDate() {
+        return updateDate;
+    }
+
+    public void setUpdateDate(Date updateDate) {
+        this.updateDate = updateDate;
+    }
+
+    public void authorities(String... authorities) {
+        Collections.addAll(this.authorities, authorities);
+    }
+
+    public void authorizedGrantTypes(String... authorizedGrantTypes) {
+        Collections.addAll(this.authorizedGrantTypes, authorizedGrantTypes);
+    }
+
+    public void scopes(String... scopes) {
+        Collections.addAll(this.scope, scopes);
+    }
+
+    public void addKeyPair(KeyPair keyPair) {
+        additionalInformation.put("public", keyPair.getPublic().getEncoded());
+        additionalInformation.put("private", keyPair.getPrivate().getEncoded());
+    }
+
+    public KeyPair getKeyPair() {
+        try {
+            PublicKey publicKey = RSAUtil.publicKey(additionalInformation.get("public"));
+            PrivateKey privateKey = RSAUtil.privateKey(additionalInformation.get("private"));
+            return new KeyPair(publicKey, privateKey);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public String getClientSecret() {

@@ -1,7 +1,7 @@
 package com.getui.logful.server.auth.config;
 
-import com.getui.logful.server.Constants;
 import com.getui.logful.server.auth.OAuth2RepositoryTokenStore;
+import com.getui.logful.server.auth.SimpleTokenEnhancer;
 import com.getui.logful.server.auth.service.SimpleClientDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +15,9 @@ import org.springframework.security.oauth2.config.annotation.web.configurers.Aut
 public class AuthorizationServerConfiguration extends AuthorizationServerConfigurerAdapter {
 
     @Autowired
+    SimpleTokenEnhancer simpleTokenEnhancer;
+
+    @Autowired
     OAuth2RepositoryTokenStore oAuth2RepositoryTokenStore;
 
     @Autowired
@@ -22,7 +25,8 @@ public class AuthorizationServerConfiguration extends AuthorizationServerConfigu
 
     @Override
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        endpoints.tokenStore(oAuth2RepositoryTokenStore);
+        endpoints.tokenStore(oAuth2RepositoryTokenStore)
+                .tokenEnhancer(simpleTokenEnhancer);
     }
 
     @Override
@@ -30,11 +34,14 @@ public class AuthorizationServerConfiguration extends AuthorizationServerConfigu
         clients.withClientDetails(simpleClientDetailService);
         /*
         clients.inMemory()
-                .withClient(Constants.CLIENT_ID)
-                .secret(Constants.CLIENT_SECRET)
+                .withClient("4c6c1fc86fa3f7fe715d3c1937e167f3")
+                .secret("288017f4110cb92f2e9a29fbefca0fd2")
                 .resourceIds("RESOURCE_ID")
                 .authorizedGrantTypes("refresh_token", "client_credentials")
                 .authorities("ROLE_CLIENT")
-                .scopes("client");*/
+                .scopes("client");
+                */
     }
+
+
 }

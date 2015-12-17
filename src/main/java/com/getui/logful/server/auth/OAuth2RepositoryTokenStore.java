@@ -4,6 +4,7 @@ import com.getui.logful.server.auth.model.OAuth2AuthenticationAccessToken;
 import com.getui.logful.server.auth.model.OAuth2AuthenticationRefreshToken;
 import com.getui.logful.server.auth.repository.OAuth2AccessTokenRepository;
 import com.getui.logful.server.auth.repository.OAuth2RefreshTokenRepository;
+import com.getui.logful.server.auth.repository.OAuth2TokenCommonRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.common.OAuth2RefreshToken;
@@ -28,6 +29,9 @@ public class OAuth2RepositoryTokenStore implements TokenStore {
     @Autowired
     OAuth2RefreshTokenRepository oAuth2RefreshTokenRepository;
 
+    @Autowired
+    OAuth2TokenCommonRepository oAuth2TokenCommonRepository;
+
     @Override
     public OAuth2Authentication readAuthentication(OAuth2AccessToken token) {
         return readAuthentication(token.getValue());
@@ -40,10 +44,10 @@ public class OAuth2RepositoryTokenStore implements TokenStore {
 
     @Override
     public void storeAccessToken(OAuth2AccessToken token, OAuth2Authentication authentication) {
-        OAuth2AuthenticationAccessToken oAuth2AuthenticationAccessToken = new OAuth2AuthenticationAccessToken(token,
+        OAuth2AuthenticationAccessToken accessToken = new OAuth2AuthenticationAccessToken(token,
                 authentication,
                 authenticationKeyGenerator.extractKey(authentication));
-        oAuth2AccessTokenRepository.save(oAuth2AuthenticationAccessToken);
+        oAuth2TokenCommonRepository.storeAccessToken(accessToken);
     }
 
     @Override
@@ -56,16 +60,13 @@ public class OAuth2RepositoryTokenStore implements TokenStore {
     }
 
     @Override
-    public void removeAccessToken(OAuth2AccessToken token) {
-        OAuth2AuthenticationAccessToken accessToken = oAuth2AccessTokenRepository.findByTokenId(token.getValue());
-        if (accessToken != null) {
-            oAuth2AccessTokenRepository.delete(accessToken);
-        }
+    public void removeAccessToken(OAuth2AccessToken accessToken) {
+        oAuth2TokenCommonRepository.removeAccessToken(accessToken);
     }
 
     @Override
     public void storeRefreshToken(OAuth2RefreshToken refreshToken, OAuth2Authentication authentication) {
-        oAuth2RefreshTokenRepository.save(new OAuth2AuthenticationRefreshToken(refreshToken, authentication));
+        oAuth2TokenCommonRepository.storeRefreshToken(new OAuth2AuthenticationRefreshToken(refreshToken, authentication));
     }
 
     @Override
@@ -79,13 +80,13 @@ public class OAuth2RepositoryTokenStore implements TokenStore {
     }
 
     @Override
-    public void removeRefreshToken(OAuth2RefreshToken token) {
-        oAuth2RefreshTokenRepository.delete(oAuth2RefreshTokenRepository.findByTokenId(token.getValue()));
+    public void removeRefreshToken(OAuth2RefreshToken refreshToken) {
+        oAuth2TokenCommonRepository.removeRefreshToken(refreshToken);
     }
 
     @Override
     public void removeAccessTokenUsingRefreshToken(OAuth2RefreshToken refreshToken) {
-        oAuth2AccessTokenRepository.delete(oAuth2AccessTokenRepository.findByRefreshToken(refreshToken.getValue()));
+        oAuth2TokenCommonRepository.removeAccessTokenUsingRefreshToken(refreshToken);
     }
 
     @Override
@@ -107,7 +108,7 @@ public class OAuth2RepositoryTokenStore implements TokenStore {
     }
 
     private Collection<OAuth2AccessToken> extractAccessTokens(List<OAuth2AuthenticationAccessToken> tokens) {
-        List<OAuth2AccessToken> accessTokens = new ArrayList<OAuth2AccessToken>();
+        List<OAuth2AccessToken> accessTokens = new ArrayList<>();
         for (OAuth2AuthenticationAccessToken token : tokens) {
             accessTokens.add(token.getoAuth2AccessToken());
         }

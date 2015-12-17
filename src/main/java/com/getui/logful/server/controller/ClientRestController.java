@@ -1,22 +1,22 @@
 package com.getui.logful.server.controller;
 
 import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.auth.ApplicationKeyPairManager;
+import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.ClientUser;
 import com.getui.logful.server.entity.Config;
 import com.getui.logful.server.entity.ControlProfile;
-import com.getui.logful.server.entity.ClientUser;
-import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.mongod.MongoConfigRepository;
 import com.getui.logful.server.mongod.MongoControlProfileRepository;
 import com.getui.logful.server.mongod.MongoUserInfoRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.parse.LogFileParseTask;
 import com.getui.logful.server.parse.LogFileProperties;
-import com.getui.logful.server.util.Checksum;
-import com.getui.logful.server.util.ControllerUtil;
-import com.getui.logful.server.util.StringUtil;
-import com.getui.logful.server.util.VersionUtil;
+import com.getui.logful.server.rest.BaseRestController;
+import com.getui.logful.server.util.*;
 import com.getui.logful.server.weed.WeedFSClientService;
 import com.getui.logful.server.weed.WeedFSMeta;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,15 +26,17 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MultipartFile;
+import scala.util.parsing.combinator.testing.Str;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 @RestController
-public class ClientRestController {
+public class ClientRestController extends BaseRestController {
 
     @Autowired
     private LogfulProperties logfulProperties;
@@ -57,12 +59,38 @@ public class ClientRestController {
     @Autowired
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
+    @Autowired
+    ApplicationKeyPairManager applicationKeyPairManager;
+
     @RequestMapping(value = "/log/info/upload",
             method = RequestMethod.POST,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
-    public String verifyClientUser(@RequestBody String payload) {
+    public String clientUserReport(@RequestBody String payload) {
+        JSONObject object = new JSONObject(payload);
+        String sdkVersion = object.optString("sdkVersion");
+        String base64Chunk = object.optString("chunk");
+        if (StringUtil.isEmpty(sdkVersion) || StringUtil.isEmpty(base64Chunk)) {
+            throw new BadRequestException();
+        }
+
+        byte[] data = Base64.decodeBase64(base64Chunk);
+        PrivateKey privateKey = applicationKeyPairManager.getPrivateKey();
+        if (privateKey != null) {
+            try {
+                byte[] temp = RSAUtil.decrypt(data, privateKey);
+                String string = new String(temp);
+
+                // TODO
+                return "{}";
+            } catch (Exception e) {
+                throw new BadRequestException("RSA key error!");
+            }
+        } else {
+            throw new BadRequestException("Unknown client user!");
+        }
+
         /*
         String platform = webRequest.getParameter("platform");
         if (!ControllerUtil.checkPlatform(platform)) {
@@ -80,8 +108,6 @@ public class ClientRestController {
             default:
                 throw new BadRequestException("Unknown version!");
         }*/
-        // TODO return rsa public key and profile
-        return "{}";
     }
 
     /**
@@ -366,7 +392,7 @@ public class ClientRestController {
             File tempDir = new File(tempDirPath);
             if (!tempDir.exists()) {
                 if (tempDir.mkdirs()) {
-                    throw new ServerException();
+                    throw new InternalServerException();
                 }
             }
 
@@ -379,10 +405,10 @@ public class ClientRestController {
                 // Check uploaded file sum.
                 String sum = Checksum.fileMD5(file.getAbsolutePath());
                 if (!sum.equalsIgnoreCase(fileSum)) {
-                    throw new ServerException();
+                    throw new InternalServerException();
                 }
             } catch (IOException e) {
-                throw new ServerException();
+                throw new InternalServerException();
             }
 
             LogFileProperties properties = new LogFileProperties();
@@ -403,7 +429,7 @@ public class ClientRestController {
 
             return responseJson(0, "");
         } else {
-            throw new ServerException();
+            throw new InternalServerException();
         }
     }
 
@@ -417,7 +443,7 @@ public class ClientRestController {
         if (!reportDir.exists()) {
             if (!reportDir.mkdirs()) {
                 // Create crash report dir failed
-                throw new ServerException();
+                throw new InternalServerException();
             }
         }
 
@@ -427,10 +453,10 @@ public class ClientRestController {
             // Check uploaded file sum
             String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
             if (!fileSumString.equalsIgnoreCase(fileSum)) {
-                throw new ServerException();
+                throw new InternalServerException();
             }
         } catch (IOException e) {
-            throw new ServerException();
+            throw new InternalServerException();
         }
 
         //TODO
@@ -451,7 +477,7 @@ public class ClientRestController {
                 File dir = new File(logfulProperties.weedDir());
                 if (!dir.exists()) {
                     if (!dir.mkdirs()) {
-                        throw new ServerException();
+                        throw new InternalServerException();
                     }
                 }
                 String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
@@ -461,19 +487,19 @@ public class ClientRestController {
                     // Check uploaded file sum
                     String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
                     if (!fileSumString.equalsIgnoreCase(fileSum)) {
-                        throw new ServerException();
+                        throw new InternalServerException();
                     }
                     // Write attachment file to weed fs.
                     weedFSClientService.write(WeedFSMeta.create(key, extension, AttachFileMeta.create(key)));
                 } catch (IOException e) {
-                    throw new ServerException();
+                    throw new InternalServerException();
                 }
             } else {
                 throw new BadRequestException();
             }
             return responseJson(0, "");
         } else {
-            throw new ServerException();
+            throw new InternalServerException();
         }
     }
 
@@ -490,22 +516,4 @@ public class ClientRestController {
         object.put("description", description);
         return object.toString();
     }
-
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public class BadRequestException extends RuntimeException {
-
-        public BadRequestException() {
-            super();
-        }
-
-        public BadRequestException(String message) {
-            super(message);
-        }
-    }
-
-    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public class ServerException extends RuntimeException {
-
-    }
-
 }

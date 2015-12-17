@@ -1,6 +1,7 @@
 package com.getui.logful.server;
 
 import com.getui.logful.server.util.StringUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,18 @@ public class LogfulProperties {
     private Weed weed;
 
     private Graylog graylog;
+    @Value("${security.oauth2.client.refresh-token-validity-seconds}")
+    private Integer refreshTokenValiditySeconds;
+    @Value("${security.oauth2.client.access-token-validity-seconds}")
+    private Integer accessTokenValiditySeconds;
+
+    public Integer getAccessTokenValiditySeconds() {
+        return accessTokenValiditySeconds;
+    }
+
+    public Integer getRefreshTokenValiditySeconds() {
+        return refreshTokenValiditySeconds;
+    }
 
     public String getTtl() {
         return ttl;

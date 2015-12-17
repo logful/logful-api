@@ -83,6 +83,7 @@ public class SimpleClientDetailService implements ClientDetailsService, ClientRe
         baseClientDetails.setRegisteredRedirectUri(simpleClientDetails.getRegisteredRedirectUri());
         baseClientDetails.setResourceIds(simpleClientDetails.getResourceIds());
         baseClientDetails.setScope(simpleClientDetails.getScope());
+        baseClientDetails.setAdditionalInformation(simpleClientDetails.getAdditionalInformation());
         return baseClientDetails;
     }
 }
