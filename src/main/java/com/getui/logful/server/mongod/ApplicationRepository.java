@@ -51,4 +51,9 @@ public class ApplicationRepository {
                 .include("clientSecret");
         return operations.find(query, SimpleClientDetails.class);
     }
+
+    public List<SimpleClientDetails> findByClientIds(String[] clientId) {
+        Query query = new Query(Criteria.where("clientId").in(clientId));
+        return operations.find(query, SimpleClientDetails.class);
+    }
 }

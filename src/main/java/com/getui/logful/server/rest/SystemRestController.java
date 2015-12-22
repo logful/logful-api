@@ -1,8 +1,11 @@
 package com.getui.logful.server.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.entity.ControlProfile;
 import com.getui.logful.server.entity.GlobalConfig;
+import com.getui.logful.server.mongod.ApplicationRepository;
 import com.getui.logful.server.mongod.GlobalConfigRepository;
 import com.getui.logful.server.mongod.MongoControlProfileRepository;
 import com.getui.logful.server.parse.GraylogClientService;
@@ -40,6 +43,9 @@ public class SystemRestController extends BaseRestController {
 
     @Autowired
     private MongoControlProfileRepository mongoControlProfileRepository;
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
 
     @RequestMapping(value = "/api/system/status",
             method = RequestMethod.GET,
@@ -115,6 +121,49 @@ public class SystemRestController extends BaseRestController {
             }
         } catch (JSONException e) {
             throw new NotAcceptableException();
+        }
+    }
+
+    @RequestMapping(value = "/api/system/grant",
+            method = RequestMethod.PUT,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseBody
+    public String addGrantClient(@RequestBody String payload) {
+        try {
+            String[] ids = new ObjectMapper().readValue(payload, String[].class);
+            if (ids.length == 0) {
+                throw new BadRequestException();
+            }
+            List<SimpleClientDetails> records = applicationRepository.findByClientIds(ids);
+            if (records != null && records.size() == ids.length) {
+                globalConfigRepository.addClient(ids);
+                return updated();
+            } else {
+                throw new BadRequestException();
+            }
+        } catch (Exception e) {
+            throw new BadRequestException();
+        }
+    }
+
+    @RequestMapping(value = "/api/system/grant",
+            method = RequestMethod.DELETE,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ResponseBody
+    public String removeGrantClient(@RequestBody String payload) {
+        try {
+            String[] ids = new ObjectMapper().readValue(payload, String[].class);
+            if (ids.length == 0) {
+                throw new BadRequestException();
+            }
+            globalConfigRepository.removeClient(ids);
+            return deleted();
+        } catch (Exception e) {
+            throw new BadRequestException();
         }
     }
 
