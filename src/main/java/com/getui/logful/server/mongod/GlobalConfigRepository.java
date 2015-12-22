@@ -1,42 +1,41 @@
 package com.getui.logful.server.mongod;
 
 import com.getui.logful.server.Constants;
-import com.getui.logful.server.entity.Config;
+import com.getui.logful.server.entity.GlobalConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class MongoConfigRepository {
+public class GlobalConfigRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoConfigRepository(MongoOperations operations) {
+    public GlobalConfigRepository(MongoOperations operations) {
         this.operations = operations;
     }
 
-    public Config save(Config config) {
+    public boolean save(GlobalConfig config) {
         if (config == null) {
-            return null;
+            return false;
         }
 
         Query query = new Query().limit(1);
-        Config exist = operations.findOne(query, Config.class);
+        GlobalConfig exist = operations.findOne(query, GlobalConfig.class);
         if (exist != null) {
             config.setId(exist.getId());
         }
 
         operations.save(config);
-
-        return config;
+        return true;
     }
 
-    public Config read() {
+    public GlobalConfig read() {
         Query query = new Query().limit(1);
 
-        Config config = operations.findOne(query, Config.class);
+        GlobalConfig config = operations.findOne(query, GlobalConfig.class);
         if (config == null) {
             return defaultConfig();
         }
@@ -49,8 +48,8 @@ public class MongoConfigRepository {
      *
      * @return Default config
      */
-    private Config defaultConfig() {
-        Config config = new Config();
+    private GlobalConfig defaultConfig() {
+        GlobalConfig config = new GlobalConfig();
         config.setLevel(Constants.DEFAULT_GRAY_LEVEL);
         return config;
     }

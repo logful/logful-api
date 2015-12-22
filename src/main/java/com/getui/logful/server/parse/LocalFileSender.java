@@ -1,6 +1,12 @@
 package com.getui.logful.server.parse;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.getui.logful.server.entity.LogMessage;
+import com.getui.logful.server.util.DateTimeUtil;
+import com.getui.logful.server.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,15 +18,10 @@ public class LocalFileSender implements SenderInterface {
 
     private OutputStream outputStream;
 
-    private LogFileProperties properties;
-
-    public LogFileProperties getProperties() {
-        return properties;
-    }
+    private JsonGenerator generator;
 
     public static LocalFileSender create(final LogFileProperties properties) {
         LocalFileSender localFileSender = new LocalFileSender();
-        localFileSender.properties = properties;
         OutputStream outputStream = localFileSender.createOutputStream(properties);
         if (outputStream != null) {
             localFileSender.setOutputStream(outputStream);
@@ -59,14 +60,31 @@ public class LocalFileSender implements SenderInterface {
 
     public void setOutputStream(OutputStream outputStream) {
         this.outputStream = outputStream;
+        JsonFactory jsonFactory = new JsonFactory();
+        try {
+            this.generator = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);
+            this.generator.setPrettyPrinter(new MinimalPrettyPrinter(""));
+        } catch (IOException e) {
+            LOG.error("Exception", e);
+        }
     }
 
     @Override
-    public void send(LogMessage logMessage) {
-        if (outputStream != null) {
-            String line = logMessage.text() + "\n";
+    public void send(LogMessage message) {
+        if (outputStream != null && generator != null) {
             try {
-                outputStream.write(line.getBytes());
+                generator.writeStartObject();
+                generator.writeStringField("date", DateTimeUtil.timeString(message.getTimestamp()));
+                generator.writeStringField("tag", message.getTag());
+                generator.writeStringField("msg", message.getMessage());
+
+                if (!StringUtil.isEmpty(message.getAttachment())) {
+                    generator.writeStringField("attr", message.getAttachment());
+                }
+
+                generator.writeEndObject();
+
+                generator.writeRaw('\n');
             } catch (IOException e) {
                 LOG.error("Exception", e);
             }
@@ -86,6 +104,10 @@ public class LocalFileSender implements SenderInterface {
 
     @Override
     public void release() throws Exception {
+        if (generator != null) {
+            generator.flush();
+            generator.close();
+        }
         if (outputStream != null) {
             outputStream.flush();
             outputStream.close();

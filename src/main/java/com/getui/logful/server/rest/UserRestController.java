@@ -27,6 +27,7 @@ public class UserRestController extends BaseRestController {
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String listUser(final WebRequest webRequest) {
+        /*
         String platform = webRequest.getParameter("platform");
         if (!ControllerUtil.checkPlatform(platform)) {
             throw new NotAcceptableException();
@@ -55,8 +56,10 @@ public class UserRestController extends BaseRestController {
             JSONObject jsonObject = clientUser.toJsonObject();
             jsonArray.put(jsonObject);
         }
+        */
 
-        return jsonArray.toString();
+        // TODO
+        return "{}";
     }
 
     @RequestMapping(value = "/api/user/{uid}",

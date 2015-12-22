@@ -3,6 +3,7 @@ package com.getui.logful.server.rest;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.mongod.ApplicationRepository;
+import com.getui.logful.server.mongod.QueryCondition;
 import com.getui.logful.server.util.ControllerUtil;
 import com.getui.logful.server.util.RSAUtil;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -15,6 +16,7 @@ import org.springframework.web.context.request.WebRequest;
 
 import java.security.KeyPair;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -32,15 +34,9 @@ public class AppRestController extends BaseRestController {
             headers = ControllerUtil.HEADER)
     @ResponseBody
     public String listApps(WebRequest request) {
-        /*
         QueryCondition condition = new QueryCondition(request);
-        List<Application> apps = applicationRepository.findAll(condition);
-        JSONArray array = new JSONArray();
-        for (Application app : apps) {
-            array.put(app.toJSONObject());
-        }
-        return array.toString();
-        */
+        List<SimpleClientDetails> apps = applicationRepository.findAll(condition);
+        // TODO
         return "{}";
     }
 
@@ -107,8 +103,10 @@ public class AppRestController extends BaseRestController {
         } catch (Exception e) {
             throw new BadRequestException();
         }
-        */
         return created();
+        */
+        // TODO
+        return "";
     }
 
     @RequestMapping(value = "/api/app/{id}",
@@ -117,8 +115,10 @@ public class AppRestController extends BaseRestController {
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @ResponseBody
-    public String deleteApp(@PathVariable String id) {
-        return null;
+    public void deleteApp(@PathVariable String id) {
+        if (!applicationRepository.delete(id)) {
+            throw new InternalServerException();
+        }
     }
 
     private String key(SimpleClientDetails clientDetails) {
@@ -128,13 +128,6 @@ public class AppRestController extends BaseRestController {
                 clientDetails.getAppId(),
                 String.valueOf(clientDetails.getCreateDate().getTime())};
         return DigestUtils.md5Hex(StringUtils.join(parts, "").getBytes());
-        /*
-        String[] parts = {UUID.randomUUID().toString(),
-                application.getName(),
-                application.getAppId(),
-                String.valueOf(application.getCreateTime())};
-        return DigestUtils.md5Hex(ArrayUtils.addAll(StringUtils.join(parts, "").getBytes(), application.getPublicKey()));
-        */
     }
 
     private String secret(SimpleClientDetails clientDetails) {

@@ -1,45 +1,70 @@
 package com.getui.logful.server.util;
 
 import com.getui.logful.server.Constants;
-import com.getui.logful.server.entity.Certificate;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.SystemUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Arrays;
 
 public class CryptoTool {
 
-    private static final String KEY_SUFFIX = "A8P20vWlvfSu3JMO6tBjgr05UvjHAh2x";
+    private static final Logger LOG = LoggerFactory.getLogger(CryptoTool.class);
 
-    private static ConcurrentHashMap<String, Certificate> certificates = new ConcurrentHashMap<>();
+    public static synchronized String AESDecrypt(byte[] security, byte[] data, int version) {
+        if (security == null || data == null) {
+            return null;
+        }
 
-    public static synchronized String AESDecrypt(String appId, byte[] data, int cryptoVersion) {
-        if (cryptoVersion == VersionUtil.CRYPTO_UPDATE_1) {
-            return CryptoTool.decrypt(appId, new String(data));
-        } else if (cryptoVersion == VersionUtil.CRYPTO_UPDATE_2) {
+        if (ArrayUtils.isEquals(data, Constants.CRYPTO_ERROR.getBytes())) {
+            return null;
+        }
+
+        if (version == VersionUtil.CRYPTO_V1) {
             try {
-                if (StringUtils.equals(new String(data, StandardCharsets.UTF_8), Constants.CRYPTO_ERROR)) {
-                    return null;
-                }
-            } catch (Exception e) {
-                // Ignore
+                return CryptoTool.decrypt(new String(security), new String(data));
+            } catch (Throwable throwable) {
+                LOG.error("Exception", throwable);
+                return null;
             }
+        } else if (version == VersionUtil.CRYPTO_V2) {
+            try {
+                byte[] bytes = decryptUpdate(security, data, data.length);
+                return new String(removePadding(bytes));
+            } catch (Throwable throwable) {
+                LOG.error("Exception", throwable);
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
 
-            Certificate certificate = certificates.get(appId);
-            if (certificate == null) {
-                String keyChar = Base64.encodeBase64String((appId + KEY_SUFFIX).getBytes());
-                certificate = generateCert(keyChar.length(), keyChar);
-                if (certificate != null) {
-                    certificates.put(appId, certificate);
-                }
-            }
-            if (certificate != null) {
-                return decryptUpdate(certificate.getKey(), certificate.getIv(), data.length, data);
+    /**
+     * Remove PKCS#7 padding.
+     *
+     * @param in Input byte array
+     * @return Byte array without padding
+     */
+    private static byte[] removePadding(byte[] in) {
+        if (in == null) {
+            return null;
+        }
+
+        int len = in.length;
+        int count = in[len - 1] & 0xff;
+        if (count > len) {
+            return null;
+        }
+
+        for (int i = 1; i <= count; i++) {
+            if (in[len - i] != count) {
+                return null;
             }
         }
-        return null;
+
+        return Arrays.copyOfRange(in, 0, len - count);
     }
 
     static {
@@ -53,8 +78,6 @@ public class CryptoTool {
 
     public static native String decrypt(String appId, String msg);
 
-    public static native Certificate generateCert(int keyLen, String keyChar);
-
-    public static native String decryptUpdate(byte[] keyData, byte[] ivData, int length, byte[] data);
+    public static native byte[] decryptUpdate(byte[] key, byte[] data, int length);
 
 }

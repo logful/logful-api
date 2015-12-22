@@ -4,5 +4,5 @@ import java.io.InputStream;
 
 public interface ParserInterface {
 
-    void parse(String appId, int cryptoVersion, InputStream inputStream);
+    void parse(byte[] security, int version, InputStream inputStream);
 }

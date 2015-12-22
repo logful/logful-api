@@ -1,15 +1,10 @@
 package com.getui.logful.server.entity;
 
-import com.getui.logful.server.Constants;
-import com.getui.logful.server.util.ControllerUtil;
 import com.getui.logful.server.util.StringUtil;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.web.context.request.WebRequest;
 
 import java.util.zip.CRC32;
 
@@ -20,99 +15,33 @@ public class ClientUser {
     private String id;
 
     private int platform;
-
+    private String clientId;
     private String uid;
-
     private String alias;
-
     private String model;
-
     private String imei;
-
     private String macAddress;
-
     private String osVersion;
-
     private String appId;
-
     private int version;
-
     private String versionString;
-
     private int level;
+    private boolean recordOn;
 
-    @Indexed(unique = true)
-    private String hashString;
-
-    public static ClientUser create(WebRequest webRequest) {
-        ClientUser clientUser = new ClientUser();
-        clientUser.platform = StringUtil.platformNumber(webRequest.getParameter("platform"));
-
-        clientUser.uid = webRequest.getParameter("uid");
-        clientUser.alias = webRequest.getParameter("alias");
-        clientUser.model = webRequest.getParameter("model");
-        clientUser.imei = webRequest.getParameter("imei");
-        clientUser.macAddress = webRequest.getParameter("macAddress");
-        clientUser.osVersion = webRequest.getParameter("osVersion");
-
-        clientUser.appId = webRequest.getParameter("appId");
-
-        String version = webRequest.getParameter("version");
-        if (version != null && version.length() > 0) {
-            clientUser.version = Integer.parseInt(version);
-        }
-
-        clientUser.versionString = webRequest.getParameter("versionString");
-
-        if (!ControllerUtil.isEmpty(clientUser.getUid())) {
-            CRC32 crc32 = new CRC32();
-            crc32.update(clientUser.getUid().getBytes());
-            long crcValue = crc32.getValue();
-
-            clientUser.level = (int) (crcValue % 100);
-        }
-
-        return clientUser;
+    public String getClientId() {
+        return clientId;
     }
 
-    public void generateHashString() {
-        String[] array = {
-                String.valueOf(platform), uid, alias, model, imei, macAddress,
-                osVersion, appId, String.valueOf(version), versionString
-        };
-        this.hashString = DigestUtils.md5Hex(StringUtils.join(array, ""));
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
-    public static int getPlatformAndroid() {
-        return Constants.PLATFORM_ANDROID;
+    public boolean isRecordOn() {
+        return recordOn;
     }
 
-    public static int getPlatformIos() {
-        return Constants.PLATFORM_IOS;
-    }
-
-    public String getHashString() {
-        return hashString;
-    }
-
-    public void setHashString(String hashString) {
-        this.hashString = hashString;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
+    public void setRecordOn(boolean recordOn) {
+        this.recordOn = recordOn;
     }
 
     public int getPlatform() {
@@ -123,12 +52,26 @@ public class ClientUser {
         this.platform = platform;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getUid() {
         return uid;
     }
 
     public void setUid(String uid) {
         this.uid = uid;
+        if (!StringUtils.isEmpty(uid)) {
+            CRC32 crc32 = new CRC32();
+            crc32.update(uid.getBytes());
+            long crcValue = crc32.getValue();
+            this.level = (int) (crcValue % 100);
+        }
     }
 
     public String getAlias() {
@@ -177,6 +120,14 @@ public class ClientUser {
 
     public void setAppId(String appId) {
         this.appId = appId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public String getVersionString() {

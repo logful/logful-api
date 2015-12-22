@@ -27,7 +27,7 @@ public class LogFileParser implements ParserInterface {
     }
 
     @Override
-    public void parse(String appId, int cryptoVersion, InputStream inputStream) {
+    public void parse(byte[] security, int version, InputStream inputStream) {
         boolean successful = true;
         BufferedInputStream bufferedInputStream = null;
         try {
@@ -109,8 +109,8 @@ public class LogFileParser implements ParserInterface {
                 }
                 short value = ByteUtil.bytesToShort(testMark);
 
-                String tag = CryptoTool.AESDecrypt(appId, tagChunk, cryptoVersion);
-                String msg = CryptoTool.AESDecrypt(appId, msgChunk, cryptoVersion);
+                String tag = CryptoTool.AESDecrypt(security, tagChunk, version);
+                String msg = CryptoTool.AESDecrypt(security, msgChunk, version);
                 if (StringUtil.decryptError(tag) || StringUtil.decryptError(msg)) {
                     successful = false;
                     break;

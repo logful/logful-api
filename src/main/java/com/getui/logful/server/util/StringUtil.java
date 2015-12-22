@@ -85,12 +85,8 @@ public class StringUtil {
         return "unknown";
     }
 
-    public static String attachmentKey(String platform, String uid, String appId, String attachmentId) {
-        String temp = String.format("%s-%s-%s-%s",
-                platform.toLowerCase(),
-                uid.toLowerCase(),
-                appId.toLowerCase(),
-                attachmentId);
+    public static String attachmentKey(int platform, String uid, String appId, String attachmentId) {
+        String temp = String.valueOf(platform) + "-" + uid + "-" + appId.toLowerCase() + "-" + attachmentId;
         return Checksum.md5(temp);
     }
 

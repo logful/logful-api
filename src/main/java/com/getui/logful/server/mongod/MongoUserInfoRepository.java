@@ -33,14 +33,17 @@ public class MongoUserInfoRepository {
         return operations.findOne(query, ClientUser.class);
     }
 
-    public boolean save(ClientUser clientUser) {
-        clientUser.generateHashString();
-        try {
-            operations.save(clientUser);
-            return true;
-        } catch (Exception e) {
-            return false;
+    public void save(ClientUser clientUser) {
+        Criteria criteria = Criteria.where("uid").is(clientUser.getUid());
+        criteria.and("appId").is(clientUser.getAppId());
+        Query query = new Query(criteria);
+
+        ClientUser exist = operations.findOne(query, ClientUser.class);
+        if (exist != null) {
+            // TODO check instance equal
+            clientUser.setId(exist.getId());
         }
+        operations.save(clientUser);
     }
 
     public ClientUser findByUid(String uid) {

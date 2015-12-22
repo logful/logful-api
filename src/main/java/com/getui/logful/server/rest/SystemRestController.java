@@ -1,9 +1,9 @@
 package com.getui.logful.server.rest;
 
 import com.getui.logful.server.LogfulProperties;
-import com.getui.logful.server.entity.Config;
 import com.getui.logful.server.entity.ControlProfile;
-import com.getui.logful.server.mongod.MongoConfigRepository;
+import com.getui.logful.server.entity.GlobalConfig;
+import com.getui.logful.server.mongod.GlobalConfigRepository;
 import com.getui.logful.server.mongod.MongoControlProfileRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.util.ControllerUtil;
@@ -36,7 +36,7 @@ public class SystemRestController extends BaseRestController {
     private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
     @Autowired
-    private MongoConfigRepository mongoConfigRepository;
+    private GlobalConfigRepository globalConfigRepository;
 
     @Autowired
     private MongoControlProfileRepository mongoControlProfileRepository;
@@ -86,7 +86,7 @@ public class SystemRestController extends BaseRestController {
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String level() {
-        Config config = mongoConfigRepository.read();
+        GlobalConfig config = globalConfigRepository.read();
 
         JSONObject object = new JSONObject();
         object.put("level", config.getLevel());
@@ -105,9 +105,9 @@ public class SystemRestController extends BaseRestController {
             JSONObject object = new JSONObject(payload);
             if (object.has("level")) {
                 int level = object.optInt("level");
-                Config config = mongoConfigRepository.read();
+                GlobalConfig config = globalConfigRepository.read();
                 config.setLevel(level);
-                mongoConfigRepository.save(config);
+                globalConfigRepository.save(config);
 
                 return updated();
             } else {

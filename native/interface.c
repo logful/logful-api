@@ -1,8 +1,8 @@
-#include <string.h>
-#include <jni.h>
-#include "util.h"
 #include "base64.h"
+#include "util.h"
+#include <jni.h>
 #include <openssl/evp.h>
+#include <string.h>
 
 #define KEY_PREFIX "A8P20vWlvfSu3JMO6tBjgr05UvjHAh2x"
 #define ERROR "CRYPTO_ERROR"
@@ -130,9 +130,13 @@ jobject
     return value;
 }
 
-jstring
-    Java_com_igexin_log_restapi_util_CryptoTool_decryptUpdate(JNIEnv *env, jobject obj, jbyteArray key_data, jbyteArray iv_data, jint data_len, jbyteArray data) {
-
+jbyteArray
+    Java_com_getui_logful_server_util_CryptoTool_decryptUpdate(JNIEnv *env,
+                                                               jobject obj,
+                                                               jbyteArray key_data,
+                                                               jbyteArray data,
+                                                               jint data_len) {
+    /*
     jboolean a;
     jboolean b;
     jboolean c;
@@ -145,13 +149,27 @@ jstring
 
     jbyte *byte3 = (*env)->GetByteArrayElements(env, data, &c);
     unsigned char *cipher_text = (unsigned char *) (byte3);
+         */
+
+    jboolean a;
+    jbyte *key_byte = (*env)->GetByteArrayElements(env, key_data, &a);
+    unsigned char *key = (unsigned char *) (key_byte);
+
+    jboolean b;
+    jbyte *data_byte = (*env)->GetByteArrayElements(env, data, &b);
+    unsigned char *cipher_text = (unsigned char *) (data_byte);
 
     EVP_CIPHER_CTX ctx;
     EVP_CIPHER_CTX_init(&ctx);
 
-    if (!EVP_DecryptInit_ex(&ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
+    if (!EVP_DecryptInit_ex(&ctx, EVP_aes_256_ecb(), NULL, key, NULL)) {
         return NULL;
-    };
+    }
+
+    // Disable padding
+    if (!EVP_CIPHER_CTX_set_padding(&ctx, 0)) {
+        return NULL;
+    }
 
     unsigned char *plain_text = malloc(data_len);
     int de_bytes_written = 0;
@@ -163,14 +181,15 @@ jstring
         return NULL;
     };
 
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    (*env)->ReleaseByteArrayElements(env, key_data, key_byte, JNI_ABORT);
+    (*env)->ReleaseByteArrayElements(env, data, data_byte, JNI_ABORT);
 
-    (*env)->ReleaseByteArrayElements(env, key_data, byte1, JNI_ABORT);
-    (*env)->ReleaseByteArrayElements(env, iv_data, byte2, JNI_ABORT);
-    (*env)->ReleaseByteArrayElements(env, data, byte3, JNI_ABORT);
+    jbyteArray result = (*env)->NewByteArray(env, data_len);
+    (*env)->SetByteArrayRegion(env, result, 0, data_len, (jbyte *) plain_text);
 
-    jstring text = (*env)->NewStringUTF(env, (const char *) plain_text);
     free(plain_text);
 
-    return text;
+    EVP_CIPHER_CTX_cleanup(&ctx);
+
+    return result;
 }

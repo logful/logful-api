@@ -24,8 +24,8 @@ public class RSAUtil {
     public static KeyPair generateKeyPair() throws Exception {
         if (generator == null) {
             generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(2048);
         }
+        generator.initialize(2048);
         return generator.genKeyPair();
     }
 
@@ -47,19 +47,20 @@ public class RSAUtil {
         return Base64.encodeBase64String(key.getEncoded());
     }
 
+    // RSA/ECB/PKCS1Padding equals RSA/None/PKCS1Padding
     public static byte[] encrypt(byte[] data, PublicKey key) throws Exception {
         if (encryptCipher == null) {
             encryptCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, key);
         }
+        encryptCipher.init(Cipher.ENCRYPT_MODE, key);
         return encryptCipher.doFinal(data);
     }
 
     public static byte[] decrypt(byte[] data, PrivateKey key) throws Exception {
         if (decryptCipher == null) {
             decryptCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            decryptCipher.init(Cipher.DECRYPT_MODE, key);
         }
+        decryptCipher.init(Cipher.DECRYPT_MODE, key);
         return decryptCipher.doFinal(data);
     }
 }

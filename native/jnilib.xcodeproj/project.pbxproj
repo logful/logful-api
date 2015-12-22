@@ -16,7 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5309397C1B7DF30E000D335D /* liblog.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblog.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		5309397C1B7DF30E000D335D /* liblogful.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblogful.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		53541AC51C157A2F003DFC1B /* base64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = base64.c; sourceTree = "<group>"; };
 		53541AC61C157A2F003DFC1B /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base64.h; sourceTree = "<group>"; };
 		53541AC71C157A2F003DFC1B /* interface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interface.c; sourceTree = "<group>"; };
@@ -126,7 +126,7 @@
 		5309397D1B7DF30E000D335D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5309397C1B7DF30E000D335D /* liblog.dylib */,
+				5309397C1B7DF30E000D335D /* liblogful.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -274,7 +274,7 @@
 			);
 			name = jnilib;
 			productName = log;
-			productReference = 5309397C1B7DF30E000D335D /* liblog.dylib */;
+			productReference = 5309397C1B7DF30E000D335D /* liblogful.dylib */;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 /* End PBXNativeTarget section */
@@ -360,8 +360,8 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_MODULE_NAME = "";
-				PRODUCT_NAME = "";
+				PRODUCT_MODULE_NAME = logful;
+				PRODUCT_NAME = logful;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -397,8 +397,8 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_MODULE_NAME = "";
-				PRODUCT_NAME = "";
+				PRODUCT_MODULE_NAME = logful;
+				PRODUCT_NAME = logful;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -421,7 +421,7 @@
 					"$(PROJECT_DIR)/src/main/c/lib",
 					"$(PROJECT_DIR)/native/lib",
 				);
-				PRODUCT_NAME = log;
+				PRODUCT_NAME = logful;
 			};
 			name = Debug;
 		};
@@ -443,7 +443,7 @@
 					"$(PROJECT_DIR)/src/main/c/lib",
 					"$(PROJECT_DIR)/native/lib",
 				);
-				PRODUCT_NAME = log;
+				PRODUCT_NAME = logful;
 			};
 			name = Release;
 		};

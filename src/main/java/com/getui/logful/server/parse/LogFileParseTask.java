@@ -51,7 +51,7 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
                 senderList.add(graylogService);
             }
             senderList.add(localFileSender);
-            new LogFileParser(this).parse(properties.getAppId(), properties.getCryptoVersion(), stream);
+            new LogFileParser(this).parse(properties.getSecurity(), properties.getCryptoVersion(), stream);
         } catch (Exception e) {
             LOG.error("Exception", e);
             // TODO
@@ -61,7 +61,7 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
 
     @Override
     public void output(long timestamp, String tag, String msg, short layoutId, int attachmentId) {
-        String platform = properties.getPlatform();
+        int platform = properties.getPlatform();
         String appId = properties.getAppId();
         int level = properties.getLevel();
         String uid = properties.getUid();

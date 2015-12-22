@@ -95,6 +95,7 @@ public class LogRestController extends BaseRestController {
     @ResponseBody
     public ResponseEntity<InputStreamResource> decrypt(@RequestParam("appId") final String appId,
                                                        @RequestParam("file") MultipartFile file) {
+        /*
         File cacheDir = new File(logfulProperties.cacheDir());
         if (!cacheDir.exists()) {
             if (!cacheDir.mkdirs()) {
@@ -141,7 +142,7 @@ public class LogRestController extends BaseRestController {
         });
 
         try {
-            parser.parse(appId, VersionUtil.CRYPTO_UPDATE_2, new FileInputStream(cacheFile.getAbsolutePath()));
+            parser.parse(appId, VersionUtil.CRYPTO_V2, new FileInputStream(cacheFile.getAbsolutePath()));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.TEXT_PLAIN);
@@ -161,6 +162,9 @@ public class LogRestController extends BaseRestController {
             }
             throw new InternalServerException();
         }
+        */
+        // TODO
+        return null;
     }
 
     @RequestMapping(value = "/api/log/attachment/{id}",

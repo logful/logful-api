@@ -12,36 +12,49 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LogFileProperties {
 
     private final ConcurrentHashMap<Integer, String> layoutMap = new ConcurrentHashMap<>();
-
-    private String platform;
-
+    private int platform;
     private String uid;
-
     private String appId;
-
     private int level;
-
     private String loggerName;
-
     private String layouts;
-
     private String alias;
-
     private String filename;
-
+    private String fileSum;
     private String workPath;
-
     private String originalFilename;
-
     private int cryptoVersion;
-
     private String key;
-
     private String extension;
+    private byte[] security;
 
     public LogFileProperties() {
         this.key = StringUtil.randomUid();
         this.extension = Constants.LOG_FILE_EXTENSION;
+    }
+
+    public int getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(int platform) {
+        this.platform = platform;
+    }
+
+    public byte[] getSecurity() {
+        return security;
+    }
+
+    public void setSecurity(byte[] security) {
+        this.security = security;
+    }
+
+    public String getFileSum() {
+        return fileSum;
+    }
+
+    public void setFileSum(String fileSum) {
+        this.fileSum = fileSum;
     }
 
     public int getCryptoVersion() {
@@ -129,13 +142,6 @@ public class LogFileProperties {
         this.level = level;
     }
 
-    public String getPlatform() {
-        return platform;
-    }
-
-    public void setPlatform(String platform) {
-        this.platform = platform;
-    }
 
     public String getFilename() {
         return filename;
@@ -174,7 +180,7 @@ public class LogFileProperties {
     }
 
     public String errorPath() {
-        return workPath + "/" + Constants.ERROR_DIR + "/" + platform.toLowerCase();
+        return workPath + "/" + Constants.ERROR_DIR + "/" + StringUtil.platformString(platform).toLowerCase();
     }
 
     public String outFilePath() {
@@ -190,7 +196,7 @@ public class LogFileProperties {
         String date = temp[1];
         try {
             int fragment = Integer.parseInt(temp[3]);
-            LogFileMeta meta = LogFileMeta.create((short) StringUtil.platformNumber(platform), uid,
+            LogFileMeta meta = LogFileMeta.create((short) platform, uid,
                     appId, loggerName, date, (short) level, fragment);
             return WeedFSMeta.create(key, extension, meta);
         } catch (Exception e) {

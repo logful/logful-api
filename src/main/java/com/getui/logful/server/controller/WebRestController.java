@@ -1,16 +1,11 @@
 package com.getui.logful.server.controller;
 
-import com.getui.logful.server.Constants;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.entity.*;
 import com.getui.logful.server.mongod.*;
 import com.getui.logful.server.parse.GraylogClientService;
-import com.getui.logful.server.parse.LocalFileSender;
-import com.getui.logful.server.parse.LogFileParser;
 import com.getui.logful.server.util.ControllerUtil;
-import com.getui.logful.server.util.DateTimeUtil;
 import com.getui.logful.server.util.StringUtil;
-import com.getui.logful.server.util.VersionUtil;
 import com.getui.logful.server.weed.WeedFSClientService;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.json.JSONArray;
@@ -27,7 +22,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.List;
@@ -42,7 +40,7 @@ public class WebRestController {
     private MongoUserInfoRepository mongoUserInfoRepository;
 
     @Autowired
-    private MongoConfigRepository mongoConfigRepository;
+    private GlobalConfigRepository globalConfigRepository;
 
     @Autowired
     private MongoControlProfileRepository mongoControlProfileRepository;
@@ -128,6 +126,7 @@ public class WebRestController {
     @ResponseBody
     public String decryptLogFile(@RequestParam("appId") final String appId,
                                  @RequestParam("logFile") MultipartFile logFile) {
+        /*
         String cacheDirPath = logfulProperties.cacheDir();
         File cacheDir = new File(cacheDirPath);
         if (!cacheDir.exists()) {
@@ -174,10 +173,8 @@ public class WebRestController {
             }
         });
 
-        // TODO
-
         try {
-            parser.parse(appId, VersionUtil.CRYPTO_UPDATE_2, new FileInputStream(outFile));
+            parser.parse(appId, VersionUtil.CRYPTO_V2, new FileInputStream(outFile));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -189,6 +186,9 @@ public class WebRestController {
         jsonObject.put("uri", uri);
 
         return jsonObject.toString();
+        */
+        // TODO
+        return null;
     }
 
     /**
@@ -289,6 +289,7 @@ public class WebRestController {
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String searchUid(final WebRequest webRequest) {
+        /*
         String platform = webRequest.getParameter("platform");
         if (!ControllerUtil.checkPlatform(platform)) {
             throw new BadRequestException();
@@ -319,6 +320,9 @@ public class WebRestController {
         }
 
         return jsonArray.toString();
+        */
+        // TODO
+        return "{}";
     }
 
     /**
@@ -422,9 +426,9 @@ public class WebRestController {
             throw new BadRequestException();
         }
 
-        Config config = mongoConfigRepository.read();
+        GlobalConfig config = globalConfigRepository.read();
         config.setLevel(Integer.parseInt(level));
-        mongoConfigRepository.save(config);
+        globalConfigRepository.save(config);
 
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("result", "ok");
@@ -446,7 +450,7 @@ public class WebRestController {
     @ResponseBody
     public String getGrayLevel() {
 
-        Config config = mongoConfigRepository.read();
+        GlobalConfig config = globalConfigRepository.read();
 
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("level", config.getLevel());

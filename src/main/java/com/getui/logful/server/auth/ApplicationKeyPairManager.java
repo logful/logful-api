@@ -2,7 +2,9 @@ package com.getui.logful.server.auth;
 
 import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.auth.repository.SimpleClientDetailsRepository;
+import com.getui.logful.server.util.RSAUtil;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,16 +24,39 @@ public class ApplicationKeyPairManager {
 
     private LinkedHashMap<String, ClientKeyPair> keyPairMap = new LinkedHashMap<>();
 
+    public byte[] decrypt(byte[] data) {
+        if (data == null) {
+            return null;
+        }
+        PrivateKey privateKey = getPrivateKey();
+        if (privateKey != null) {
+            try {
+                return RSAUtil.decrypt(data, privateKey);
+            } catch (Exception e) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+    }
+
     public PrivateKey getPrivateKey() {
+        String clientId = getClientId();
+        if (!StringUtils.isEmpty(clientId)) {
+            ClientKeyPair keyPair = getKeyPair(clientId);
+            if (keyPair != null) {
+                return keyPair.getPrivateKey();
+            }
+        }
+        return null;
+    }
+
+    public String getClientId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
             if (authentication.getClass().isAssignableFrom(OAuth2Authentication.class)) {
                 OAuth2Authentication oAuth2Authentication = ((OAuth2Authentication) authentication);
-                String clientId = oAuth2Authentication.getOAuth2Request().getClientId();
-                ClientKeyPair keyPair = getKeyPair(clientId);
-                if (keyPair != null) {
-                    return keyPair.getPrivateKey();
-                }
+                return oAuth2Authentication.getOAuth2Request().getClientId();
             }
         }
         return null;

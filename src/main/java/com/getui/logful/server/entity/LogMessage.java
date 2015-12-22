@@ -61,12 +61,12 @@ public class LogMessage {
         this.status = STATE_NORMAL;
     }
 
-    public static LogMessage create(String platform, String uid, String appId,
+    public static LogMessage create(int platform, String uid, String appId,
                                     String loggerName, String msgLayout,
                                     int level, long timestamp, String tag,
                                     String msg, String alias, String attachment) {
         LogMessage logMessage = new LogMessage();
-        logMessage.setPlatform(platform);
+        logMessage.setPlatform(StringUtil.platformString(platform));
         logMessage.setUid(uid);
         logMessage.setAppId(appId);
         logMessage.setLoggerName(loggerName);
