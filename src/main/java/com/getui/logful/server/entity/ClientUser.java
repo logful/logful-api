@@ -146,20 +146,26 @@ public class ClientUser {
         this.level = level;
     }
 
-    public JSONObject toJsonObject() {
-        JSONObject jsonObject = new JSONObject();
+    public JSONObject appObject() {
+        JSONObject object = new JSONObject();
+        object.put("appId", appId);
+        object.put("version", version);
+        object.put("versionString", versionString);
+        object.put("recordOn", recordOn);
+        return object;
+    }
 
-        jsonObject.put("platform", StringUtil.platformString(platform));
-        jsonObject.put("uid", uid);
-        jsonObject.put("alias", alias);
-        jsonObject.put("model", model);
-        jsonObject.put("imei", imei);
-        jsonObject.put("macAddress", macAddress);
-        jsonObject.put("osVersion", osVersion);
-        jsonObject.put("appId", appId);
-        jsonObject.put("version", version);
-        jsonObject.put("versionString", versionString);
-
-        return jsonObject;
+    public JSONObject baseObject() {
+        JSONObject object = new JSONObject();
+        object.put("platform", StringUtil.platformString(platform));
+        object.put("uid", uid);
+        object.put("alias", alias);
+        object.put("model", model);
+        object.put("imei", imei);
+        object.put("macAddress", macAddress);
+        object.put("osVersion", osVersion);
+        object.put("clientId", clientId);
+        object.put("level", level);
+        return object;
     }
 }

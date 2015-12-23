@@ -2,8 +2,9 @@ package com.getui.logful.server.rest;
 
 import com.getui.logful.server.entity.ClientUser;
 import com.getui.logful.server.mongod.MongoUserInfoRepository;
+import com.getui.logful.server.mongod.QueryCondition;
 import com.getui.logful.server.util.ControllerUtil;
-import com.getui.logful.server.util.StringUtil;
+import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,40 +27,29 @@ public class UserRestController extends BaseRestController {
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public String listUser(final WebRequest webRequest) {
-        /*
-        String platform = webRequest.getParameter("platform");
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new NotAcceptableException();
+    public String listUser(final WebRequest request) {
+        QueryCondition condition = new QueryCondition(request);
+
+        String platform = request.getParameter("platform");
+
+        if (!StringUtils.isNumeric(platform)) {
+            throw new BadRequestException();
         }
 
-        ClientUser info = ClientUser.create(webRequest);
-        Criteria criteria = Criteria.where("platform").is(info.getPlatform());
+        Criteria criteria = Criteria.where("platform").is(Integer.parseInt(platform));
 
-        addCriteria(criteria, "alias", info.getAlias());
-        addCriteria(criteria, "model", info.getModel());
-        addCriteria(criteria, "imei", info.getImei());
-        addCriteria(criteria, "macAddress", info.getMacAddress());
-        addCriteria(criteria, "osVersion", info.getOsVersion());
-        addCriteria(criteria, "appId", info.getAppId());
+        String[] keys = {"alias", "model", "imei", "macAddress", "osVersion", "appId", "versionString"};
+        for (String key : keys) {
+            addCriteria(criteria, key, request.getParameter(key));
+        }
 
-        String version = webRequest.getParameter("version");
-        if (!ControllerUtil.isEmpty(version)) {
+        String version = request.getParameter("version");
+        if (StringUtils.isNumeric(version)) {
             criteria.and("version").is(Integer.parseInt(version));
         }
 
-        addCriteria(criteria, "versionString", info.getVersionString());
-
-        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
-        JSONArray jsonArray = new JSONArray();
-        for (ClientUser clientUser : clientUserList) {
-            JSONObject jsonObject = clientUser.toJsonObject();
-            jsonArray.put(jsonObject);
-        }
-        */
-
-        // TODO
-        return "{}";
+        List<ClientUser> users = mongoUserInfoRepository.findAll(condition, criteria);
+        return listToJson(users);
     }
 
     @RequestMapping(value = "/api/user/{uid}",
@@ -70,31 +60,17 @@ public class UserRestController extends BaseRestController {
     @ResponseBody
     public String viewUser(@PathVariable String uid) {
         Criteria criteria = Criteria.where("uid").is(uid);
-        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
-        if (clientUserList.size() > 0) {
-            ClientUser first = clientUserList.get(0);
-
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("platform", StringUtil.platformString(first.getPlatform()));
-            jsonObject.put("uid", first.getUid());
-            jsonObject.put("alias", first.getAlias());
-            jsonObject.put("model", first.getModel());
-            jsonObject.put("imei", first.getImei());
-            jsonObject.put("macAddress", first.getMacAddress());
-            jsonObject.put("osVersion", first.getOsVersion());
-
-            JSONArray jsonArray = new JSONArray();
-            for (ClientUser info : clientUserList) {
-                JSONObject object = new JSONObject();
-                object.put("appId", info.getAppId());
-                object.put("version", info.getVersion());
-                object.put("versionString", info.getVersionString());
-                jsonArray.put(object);
+        List<ClientUser> users = mongoUserInfoRepository.findAll(criteria);
+        if (users != null && users.size() > 0) {
+            JSONArray array = new JSONArray();
+            for (ClientUser user : users) {
+                array.put(user.appObject());
             }
 
-            jsonObject.put("app", jsonArray);
+            JSONObject object = users.get(0).baseObject();
+            object.put("apps", array);
 
-            return jsonObject.toString();
+            return object.toString();
         } else {
             throw new NotFoundException();
         }

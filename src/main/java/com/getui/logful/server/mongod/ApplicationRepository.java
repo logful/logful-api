@@ -52,7 +52,7 @@ public class ApplicationRepository {
         return operations.find(query, SimpleClientDetails.class);
     }
 
-    public List<SimpleClientDetails> findByClientIds(String[] clientId) {
+    public List<SimpleClientDetails> findByClientIds(Object[] clientId) {
         Query query = new Query(Criteria.where("clientId").in(clientId));
         return operations.find(query, SimpleClientDetails.class);
     }

@@ -1,9 +1,13 @@
 package com.getui.logful.server.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getui.logful.server.util.DateTimeUtil;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
+
+import java.io.StringWriter;
+import java.util.List;
 
 public class BaseRestController {
 
@@ -40,6 +44,21 @@ public class BaseRestController {
         public BadRequestException(String message) {
             super(message);
         }
+    }
+
+    public String listToJson(List<?> list) {
+        if (list != null && list.size() > 0) {
+            try {
+                StringWriter writer = new StringWriter();
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.writeValue(writer, list);
+                writer.close();
+                return writer.toString();
+            } catch (Exception e) {
+                throw new InternalServerException();
+            }
+        }
+        throw new NotFoundException();
     }
 
     @ResponseStatus(value = HttpStatus.FORBIDDEN)

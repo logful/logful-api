@@ -71,7 +71,7 @@ public class ApplicationKeyPairManager {
         if (clientKeyPair == null) {
             SimpleClientDetails simpleClientDetails = simpleClientDetailsRepository.findByClientId(clientId);
             if (simpleClientDetails != null) {
-                KeyPair keyPair = simpleClientDetails.getKeyPair();
+                KeyPair keyPair = simpleClientDetails.keyPair();
                 if (keyPair != null) {
                     clientKeyPair = new ClientKeyPair(keyPair);
                     keyPairMap.put(clientId, clientKeyPair);

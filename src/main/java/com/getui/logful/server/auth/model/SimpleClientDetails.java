@@ -1,5 +1,6 @@
 package com.getui.logful.server.auth.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.getui.logful.server.util.RSAUtil;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -21,38 +22,55 @@ public class SimpleClientDetails {
     private String name;
 
     private String appId;
+
     private Date createDate;
+
     private Date updateDate;
+
     @Indexed
     private String clientId;
+
+    @JsonIgnore
     private Set<String> resourceIds = new HashSet<>();
+
+    @JsonIgnore
     private boolean secretRequired;
+
     @Indexed
     private String clientSecret;
+
+    @JsonIgnore
     private boolean scoped;
+
+    @JsonIgnore
     private Set<String> scope = new HashSet<>();
+
+    @JsonIgnore
     private Set<String> authorizedGrantTypes = new HashSet<>();
+
+    @JsonIgnore
     private Set<String> registeredRedirectUri = new HashSet<>();
+
+    @JsonIgnore
     private Collection<String> authorities = new LinkedHashSet<>();
+
+    @JsonIgnore
     private Integer accessTokenValiditySeconds;
+
+    @JsonIgnore
     private Integer refreshTokenValiditySeconds;
+
+    @JsonIgnore
     private boolean autoApprove;
+
+    @JsonIgnore
     private Map<String, Object> additionalInformation = new LinkedHashMap<>();
 
     public SimpleClientDetails() {
         BaseClientDetails temp = new BaseClientDetails();
         this.setAccessTokenValiditySeconds(temp.getAccessTokenValiditySeconds());
         this.setRefreshTokenValiditySeconds(temp.getRefreshTokenValiditySeconds());
-
-        // this.registeredRedirectUri = new HashSet<>();
-
-        // this.scope.addAll(Arrays.asList(new String[]{"client"}));
-        // this.authorities.addAll(Arrays.asList(new String[]{"logful_client"}));
-
-        // TODO
-        // this.resourceIds = new HashSet<>();
-
-        //this.setAdditionalInformation(new HashMap<String, Object>());
+        // TODO resourceIds
     }
 
     public SimpleClientDetails(ClientDetails clientDetails) {
@@ -67,7 +85,6 @@ public class SimpleClientDetails {
         this.scope = clientDetails.getScope();
         this.scoped = clientDetails.isScoped();
         this.secretRequired = clientDetails.isSecretRequired();
-        // this.id = clientDetails.getClientId();
     }
 
     public Date getCreateDate() {
@@ -119,7 +136,7 @@ public class SimpleClientDetails {
         additionalInformation.put("private", keyPair.getPrivate().getEncoded());
     }
 
-    public KeyPair getKeyPair() {
+    public KeyPair keyPair() {
         try {
             PublicKey publicKey = RSAUtil.publicKey(additionalInformation.get("public"));
             PrivateKey privateKey = RSAUtil.privateKey(additionalInformation.get("private"));

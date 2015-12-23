@@ -22,7 +22,7 @@ apply plugin: 'io.spring.dependency-management'
 
 jar {
     baseName = 'logful-api'
-    version = '0.2.0'
+    version = '0.2.1'
 }
 
 sourceCompatibility = 1.7

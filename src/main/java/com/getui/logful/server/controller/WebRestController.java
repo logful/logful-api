@@ -347,7 +347,7 @@ public class WebRestController {
         Criteria criteria = Criteria.where("platform").is(StringUtil.platformNumber(platform));
         criteria.and("uid").is(uid);
 
-        List<ClientUser> clientUserList = mongoUserInfoRepository.findAllByCriteria(criteria);
+        List<ClientUser> clientUserList = mongoUserInfoRepository.findAll(criteria);
         if (clientUserList.size() > 0) {
             ClientUser first = clientUserList.get(0);
 

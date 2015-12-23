@@ -3,6 +3,7 @@ package com.getui.logful.server.mongod;
 import com.getui.logful.server.entity.ClientUser;
 import com.mongodb.WriteResult;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -62,7 +63,20 @@ public class MongoUserInfoRepository {
         return operations.findAll(ClientUser.class);
     }
 
-    public List<ClientUser> findAllByCriteria(Criteria criteria) {
+    public List<ClientUser> findAll(QueryCondition condition, Criteria criteria) {
+        return findAll(condition.getOrder(), condition.getSort(), condition.getOffset(), condition.getLimit(), criteria);
+    }
+
+    public List<ClientUser> findAll(Sort.Direction order, String sort, int offset, int limit, Criteria criteria) {
+        Query query = new Query(criteria);
+        if (sort != null) {
+            query.with(new Sort(order, sort));
+        }
+        query.skip(offset).limit(limit);
+        return operations.find(query, ClientUser.class);
+    }
+
+    public List<ClientUser> findAll(Criteria criteria) {
         Query query = new Query(criteria);
         return operations.find(query, ClientUser.class);
     }

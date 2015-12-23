@@ -1,6 +1,7 @@
 package com.getui.logful.server;
 
 import com.getui.logful.server.entity.Layout;
+import org.apache.commons.lang.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,6 +20,9 @@ public class GlobalReference {
     }
 
     public static Layout getLayout(String template) {
+        if (StringUtils.isEmpty(template)) {
+            return null;
+        }
         GlobalReference reference = reference();
         Layout layout = reference.layoutMap.get(template);
         if (layout == null) {

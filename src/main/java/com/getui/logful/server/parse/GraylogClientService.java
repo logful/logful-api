@@ -10,6 +10,7 @@ import com.getui.logful.server.mongod.MongoLogMessageRepository;
 import com.getui.logful.server.util.StringUtil;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
+import org.apache.commons.lang.StringUtils;
 import org.graylog2.gelfclient.*;
 import org.graylog2.gelfclient.transport.GelfTransport;
 import org.slf4j.Logger;
@@ -132,7 +133,6 @@ public class GraylogClientService implements SenderInterface {
 
     public GelfMessage createMessage(LogMessage logMessage) {
         boolean formatError = false;
-
         GelfMessageBuilder builder = new GelfMessageBuilder(logMessage.getTag(), "127.0.0.1")
                 .level(GelfMessageLevel.INFO);
         GelfMessage message = builder.message(logMessage.getMessage())
@@ -147,105 +147,54 @@ public class GraylogClientService implements SenderInterface {
                 .build();
 
         String attachment = logMessage.getAttachment();
-        if (!StringUtil.isEmpty(attachment)) {
+        if (StringUtils.isNotEmpty(attachment)) {
             message.addAdditionalField("_attachment", attachment);
         }
 
-        // 别名字段
         String alias = logMessage.getAlias();
-        if (alias != null && alias.length() > 0) {
+        if (StringUtils.isNotEmpty(alias)) {
             message.addAdditionalField("_alias", alias);
         }
 
         String msg = logMessage.getMessage();
         String template = logMessage.getMsgLayout();
 
-        if (msg.contains("|")) {
-            // 包含 "|"
-            String[] columns = msg.split("\\|");
-            int length = columns.length;
-            if (template == null || template.length() == 0) {
-                // 未设置模版
-                for (int i = 0; i < length; i++) {
-                    String key = String.format("_col%d", i + 1);
-                    message.addAdditionalField(key, columns[i]);
+        Layout layout = GlobalReference.getLayout(template);
+
+        String[] columns = msg.split("\\|");
+        int index = 1;
+        for (String col : columns) {
+            String[] keyValue = col.split(":", 2);
+            if (layout != null && keyValue.length == 2) {
+                String abbr = keyValue[0];
+                LayoutItem layoutItem = layout.getItem(abbr);
+                if (layoutItem == null) {
+                    message.addAdditionalField("_col" + index, col);
+                } else {
+                    String key = "_col_" + layoutItem.getFullName();
+                    switch (layoutItem.getType()) {
+                        case LayoutItem.TYPE_NUMBER:
+                            NumberParseResult result = parse(keyValue[1]);
+                            if (result.isSuccessful()) {
+                                message.addAdditionalField(key, result.getObject());
+                            } else {
+                                formatError = true;
+                            }
+                            break;
+                        case LayoutItem.TYPE_STRING:
+                            message.addAdditionalField(key, keyValue[1]);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             } else {
-                // 已设置模版
-                Layout layout = GlobalReference.getLayout(template);
-                for (int i = 0; i < length; i++) {
-                    String value = columns[i];
-                    if (value.contains(Constants.DEFAULT_FIELD_SEPARATOR)) {
-                        // 包含 ":" 以第一个 ":" 分割
-                        String[] keyValue = value.split(Constants.DEFAULT_FIELD_SEPARATOR, 2);
-                        String abbr = keyValue[0];
-                        LayoutItem layoutItem = layout.getItem(abbr);
-                        if (layoutItem == null) {
-                            // 未找到设置的字段
-                            String key = String.format("_col%d", i + 1);
-                            message.addAdditionalField(key, value);
-                        } else {
-                            // 有设置的字段
-                            String key = "_col_" + layoutItem.getFullName();
-                            switch (layoutItem.getType()) {
-                                case LayoutItem.TYPE_NUMBER:
-                                    // Number 类型
-                                    NumberParseResult result = parse(keyValue[1]);
-                                    if (result.isSuccessful()) {
-                                        message.addAdditionalField(key, result.getObject());
-                                    } else {
-                                        formatError = true;
-                                    }
-                                    break;
-                                case LayoutItem.TYPE_STRING:
-                                    // String 类型
-                                    message.addAdditionalField(key, keyValue[1]);
-                                    break;
-                            }
-                        }
-                    } else {
-                        // 不包含 ":""
-                        String key = String.format("_col%d", i + 1);
-                        message.addAdditionalField(key, value);
-                    }
-                }
+                message.addAdditionalField("_col" + index, col);
             }
-        } else {
-            // 不包含 "|"
-            if (msg.contains(Constants.DEFAULT_FIELD_SEPARATOR)) {
-                String[] keyValue = msg.split(Constants.DEFAULT_FIELD_SEPARATOR, 2);
-                if (keyValue.length == 2) {
-                    String abbr = keyValue[0];
-
-                    Layout layout = GlobalReference.getLayout(template);
-                    LayoutItem layoutItem = layout.getItem(abbr);
-
-                    if (layoutItem != null) {
-                        // 找到设置的字段
-                        String key = "_col_" + layoutItem.getFullName();
-                        switch (layoutItem.getType()) {
-                            case LayoutItem.TYPE_NUMBER:
-                                // Number 类型
-                                NumberParseResult result = parse(keyValue[1]);
-                                if (result.isSuccessful()) {
-                                    message.addAdditionalField(key, result.getObject());
-                                } else {
-                                    formatError = true;
-                                }
-                                break;
-                            case LayoutItem.TYPE_STRING:
-                                // String 类型
-                                message.addAdditionalField(key, keyValue[1]);
-                                break;
-                        }
-                    }
-                }
-            }
+            index++;
         }
-        if (!formatError) {
-            return message;
-        }
-        return null;
+
+        return formatError ? null : message;
     }
 
     public NumberParseResult parse(String string) {

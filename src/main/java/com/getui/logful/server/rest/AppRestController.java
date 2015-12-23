@@ -1,5 +1,6 @@
 package com.getui.logful.server.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.mongod.ApplicationRepository;
@@ -32,12 +33,12 @@ public class AppRestController extends BaseRestController {
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String listApps(WebRequest request) {
         QueryCondition condition = new QueryCondition(request);
         List<SimpleClientDetails> apps = applicationRepository.findAll(condition);
-        // TODO
-        return "{}";
+        return listToJson(apps);
     }
 
     @RequestMapping(value = "/api/app",
@@ -92,6 +93,12 @@ public class AppRestController extends BaseRestController {
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public String updateApp(@PathVariable String id, @RequestBody String payload) {
+        try {
+            SimpleClientDetails temp = new ObjectMapper().readValue(payload, SimpleClientDetails.class);
+            // TODO update
+        } catch (Exception e) {
+            throw new BadRequestException();
+        }
         /*
         if (StringUtils.isEmpty(application.getName()) || StringUtils.isEmpty(application.getAppId())) {
             throw new BadRequestException();
@@ -105,7 +112,6 @@ public class AppRestController extends BaseRestController {
         }
         return created();
         */
-        // TODO
         return "";
     }
 
@@ -123,7 +129,7 @@ public class AppRestController extends BaseRestController {
 
     private String key(SimpleClientDetails clientDetails) {
         String[] parts = {UUID.randomUUID().toString(),
-                "RANDOM-spWzPXTGL8lT6OlNMoqu3e4GWs2L7uhR",
+                "RANDOM-SPWZPXTGL8LT6OLNMOQU3E4GWS2L7UHR",
                 clientDetails.getName(),
                 clientDetails.getAppId(),
                 String.valueOf(clientDetails.getCreateDate().getTime())};
@@ -132,7 +138,7 @@ public class AppRestController extends BaseRestController {
 
     private String secret(SimpleClientDetails clientDetails) {
         String[] parts = {UUID.randomUUID().toString(),
-                "RANDOM-Xbu88x2VQn2jwTs5GBPnHKlafK5ACpjJ",
+                "RANDOM-XBU88X2VQN2JWTS5GBPNHKLAFK5ACPJJ",
                 clientDetails.getName(),
                 clientDetails.getAppId(),
                 String.valueOf(clientDetails.getCreateDate().getTime())};
