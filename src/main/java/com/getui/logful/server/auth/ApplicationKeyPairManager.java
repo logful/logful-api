@@ -3,14 +3,20 @@ package com.getui.logful.server.auth;
 import com.getui.logful.server.auth.model.SimpleClientDetails;
 import com.getui.logful.server.auth.repository.SimpleClientDetailsRepository;
 import com.getui.logful.server.util.RSAUtil;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
+import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -18,6 +24,8 @@ import java.util.LinkedHashMap;
 
 @Component
 public class ApplicationKeyPairManager {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ApplicationKeyPairManager.class);
 
     @Autowired
     SimpleClientDetailsRepository simpleClientDetailsRepository;
@@ -90,16 +98,25 @@ public class ApplicationKeyPairManager {
 
         private PrivateKey privateKey;
 
-        private String publicKeyBase64;
+        private String pemPublicKey;
 
         public ClientKeyPair(KeyPair keyPair) {
             this.privateKey = keyPair.getPrivate();
             this.publicKey = keyPair.getPublic();
-            this.publicKeyBase64 = Base64.encodeBase64String(keyPair.getPublic().getEncoded());
+            PemObject pemObject = new PemObject("PUBLIC KEY", keyPair.getPublic().getEncoded());
+            StringWriter writer = new StringWriter();
+            PemWriter pemWriter = new PEMWriter(writer);
+            try {
+                pemWriter.writeObject(pemObject);
+                pemWriter.close();
+                this.pemPublicKey = writer.toString();
+            } catch (IOException e) {
+                LOG.error("Exception", e);
+            }
         }
 
-        public String getPublicKeyBase64() {
-            return publicKeyBase64;
+        public String getPemPublicKey() {
+            return pemPublicKey;
         }
 
         public PublicKey getPublicKey() {

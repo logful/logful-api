@@ -58,6 +58,7 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.6.3'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.6.3'
     compile 'com.squareup.okhttp:okhttp:2.6.0'
+    compile 'org.bouncycastle:bcprov-jdk15+:1.46'
 
     testCompile("org.springframework.boot:spring-boot-starter-test")
 }

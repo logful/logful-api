@@ -1,6 +1,7 @@
 package com.getui.logful.server.auth;
 
 import com.getui.logful.server.auth.ApplicationKeyPairManager.ClientKeyPair;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
@@ -22,9 +23,11 @@ public class SimpleTokenEnhancer implements TokenEnhancer {
         String clientId = authentication.getOAuth2Request().getClientId();
         ClientKeyPair clientKeyPair = applicationKeyPairManager.getKeyPair(clientId);
         if (clientKeyPair != null) {
-            Map<String, Object> additionalInfo = new HashMap<>();
-            additionalInfo.put("public_key", clientKeyPair.getPublicKeyBase64());
-            ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(additionalInfo);
+            if (StringUtils.isNotEmpty(clientKeyPair.getPemPublicKey())) {
+                Map<String, Object> additionalInfo = new HashMap<>();
+                additionalInfo.put("public_key", clientKeyPair.getPemPublicKey());
+                ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(additionalInfo);
+            }
         }
         return accessToken;
     }

@@ -1,6 +1,5 @@
 package com.getui.logful.server.parse;
 
-import com.getui.logful.server.Constants;
 import com.getui.logful.server.GlobalReference;
 import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.entity.Layout;

@@ -30,13 +30,11 @@ public class GlobalReference {
             int size = reference.layoutMap.size();
             if (size >= MAX_CAPACITY) {
                 int itemToRemove = size - MAX_CAPACITY;
-                // 移除超出最大容量的元素
                 for (int i = 0; i < itemToRemove; i++) {
                     Map.Entry<String, Layout> entry = reference.layoutMap.entrySet().iterator().next();
                     reference.layoutMap.remove(entry.getKey());
                 }
             }
-            // 缓存已解析的模板
             reference.layoutMap.put(template, layout);
         }
         return layout;
