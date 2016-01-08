@@ -26,6 +26,11 @@ public class ApplicationRepository {
         return clientDetails;
     }
 
+    public SimpleClientDetails findById(String id) {
+        Query query = new Query(Criteria.where("_id").is(id));
+        return operations.findOne(query, SimpleClientDetails.class);
+    }
+
     public boolean delete(String id) {
         Query query = new Query(Criteria.where("_id").is(id));
         WriteResult writeResult = operations.remove(query, SimpleClientDetails.class);

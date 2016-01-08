@@ -29,7 +29,7 @@ public class AppRestController extends BaseRestController {
     @Autowired
     ApplicationRepository applicationRepository;
 
-    @RequestMapping(value = "/api/apps",
+    @RequestMapping(value = "/api/app",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
@@ -52,15 +52,13 @@ public class AppRestController extends BaseRestController {
         try {
             JSONObject object = new JSONObject(payload);
             String name = object.optString("name");
-            String appId = object.getString("appId");
-            if (!StringUtils.isEmpty(name) && !StringUtils.isEmpty(appId)) {
+            if (StringUtils.isNotEmpty(name)) {
                 SimpleClientDetails simpleClientDetails = new SimpleClientDetails();
 
                 simpleClientDetails.setAccessTokenValiditySeconds(logfulProperties.getAccessTokenValiditySeconds());
                 simpleClientDetails.setRefreshTokenValiditySeconds(logfulProperties.getRefreshTokenValiditySeconds());
 
                 simpleClientDetails.setName(name);
-                simpleClientDetails.setAppId(appId);
                 simpleClientDetails.setCreateDate(new Date());
 
                 simpleClientDetails.authorizedGrantTypes("refresh_token", "client_credentials");
@@ -83,6 +81,21 @@ public class AppRestController extends BaseRestController {
             }
         } catch (Exception e) {
             throw new BadRequestException();
+        }
+    }
+
+    @RequestMapping(value = "/api/app/{id}",
+            method = RequestMethod.GET,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseBody
+    public SimpleClientDetails getDetail(@PathVariable String id) {
+        SimpleClientDetails item = applicationRepository.findById(id);
+        if (item != null) {
+            return item;
+        } else {
+            throw new NotFoundException();
         }
     }
 
@@ -128,6 +141,7 @@ public class AppRestController extends BaseRestController {
     }
 
     private String key(SimpleClientDetails clientDetails) {
+
         String[] parts = {UUID.randomUUID().toString(),
                 "RANDOM-SPWZPXTGL8LT6OLNMOQU3E4GWS2L7UHR",
                 clientDetails.getName(),

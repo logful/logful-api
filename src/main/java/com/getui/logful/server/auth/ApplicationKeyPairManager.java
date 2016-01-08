@@ -92,7 +92,7 @@ public class ApplicationKeyPairManager {
         return null;
     }
 
-    public class ClientKeyPair {
+    public static class ClientKeyPair {
 
         private PublicKey publicKey;
 

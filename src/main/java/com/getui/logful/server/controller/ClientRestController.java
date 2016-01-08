@@ -5,10 +5,11 @@ import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.auth.ApplicationKeyPairManager;
 import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.entity.ClientUser;
+import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.GlobalConfig;
 import com.getui.logful.server.mongod.GlobalConfigRepository;
+import com.getui.logful.server.mongod.MongoClientUserRepository;
 import com.getui.logful.server.mongod.MongoControlProfileRepository;
-import com.getui.logful.server.mongod.MongoUserInfoRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.parse.LogFileParseTask;
 import com.getui.logful.server.parse.LogFileProperties;
@@ -23,13 +24,13 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.IOException;
 
 @RestController
 public class ClientRestController extends BaseRestController {
@@ -40,7 +41,7 @@ public class ClientRestController extends BaseRestController {
     private LogfulProperties logfulProperties;
 
     @Autowired
-    private MongoUserInfoRepository mongoUserInfoRepository;
+    private MongoClientUserRepository mongoClientUserRepository;
 
     @Autowired
     private GlobalConfigRepository globalConfigRepository;
@@ -101,6 +102,34 @@ public class ClientRestController extends BaseRestController {
     }
 
     /**
+     * Bind push sdk cid.
+     *
+     * @param payload Payload data
+     */
+    @RequestMapping(value = "/log/bind",
+            method = RequestMethod.POST,
+            produces = ControllerUtil.CONTENT_TYPE,
+            headers = ControllerUtil.HEADER)
+    @ResponseStatus(HttpStatus.OK)
+    public void bindDeviceId(@RequestBody String payload) {
+        try {
+            JSONObject object = new JSONObject(payload);
+
+            int platform = object.getInt("platform");
+            String uid = object.getString("uid");
+            String appId = object.getString("appId");
+            String deviceId = object.getString("deviceId");
+
+            Criteria criteria = Criteria.where("platform").is(platform).and("uid").is(uid).and("appId").is(appId);
+            if (!mongoClientUserRepository.bindDeviceId(criteria, deviceId)) {
+                throw new InternalServerException();
+            }
+        } catch (Exception e) {
+            throw new BadRequestException();
+        }
+    }
+
+    /**
      * Upload log file.
      *
      * @param payload Payload data
@@ -152,11 +181,7 @@ public class ClientRestController extends BaseRestController {
     /**
      * Upload crash report file.
      *
-     * @param sdkVersion Sdk Version
-     * @param platform   Platform
-     * @param uid        User unique id
-     * @param appId      Application id
-     * @param fileSum    File MD5 sum
+     * @param payload    Payload
      * @param reportFile Crash report file
      */
     @RequestMapping(value = "/log/crash/upload",
@@ -165,19 +190,22 @@ public class ClientRestController extends BaseRestController {
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public void uploadCrashReport(@RequestParam("sdkVersion") String sdkVersion,
-                                  @RequestParam("platform") String platform,
-                                  @RequestParam("uid") String uid,
-                                  @RequestParam("appId") String appId,
-                                  @RequestParam("fileSum") String fileSum,
+    public void uploadCrashReport(@RequestParam("payload") String payload,
                                   @RequestParam("reportFile") MultipartFile reportFile) {
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
+        JSONObject object = new JSONObject(payload);
+        String sdkVersion = object.getString("sdkVersion");
         switch (VersionUtil.version(sdkVersion)) {
             case V1:
-                v1UploadCrashReport(platform, uid, appId, fileSum, reportFile);
+                String fileSum = object.getString("fileSum");
+                JSONObject meta = object.getJSONObject("meta");
+                ObjectMapper mapper = new ObjectMapper();
+                try {
+                    CrashFileMeta fileMeta = mapper.readValue(meta.toString(), CrashFileMeta.class);
+                    fileMeta.setClientId(applicationKeyPairManager.getClientId());
+                    v1UploadCrashReport(fileMeta, fileSum, reportFile);
+                } catch (Exception e) {
+                    throw new BadRequestException();
+                }
                 break;
             default:
                 throw new BadRequestException("Unknown version!");
@@ -316,17 +344,13 @@ public class ClientRestController extends BaseRestController {
                                      @RequestParam("appId") String appId,
                                      @RequestParam("fileSum") String fileSum,
                                      @RequestParam("reportFile") MultipartFile reportFile) {
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
-        v1UploadCrashReport(platform, uid, appId, fileSum, reportFile);
+        // Nothing
     }
 
     // ---------------------------------- Detail rest controller version function api ------------------------------ //
 
     private String v1ClientUserReport(final ClientUser clientUser) {
-        mongoUserInfoRepository.save(clientUser);
+        mongoClientUserRepository.save(clientUser);
         GlobalConfig config = globalConfigRepository.read();
 
         boolean granted = config.getGrantClients().contains(clientUser.getClientId()) &&
@@ -403,25 +427,16 @@ public class ClientRestController extends BaseRestController {
         int queueSize = threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size();
         int capacity = ControllerUtil.queueCapacity(logfulProperties.getParser().getQueueCapacity());
         if (queueSize < capacity) {
-            String tempDirPath = logfulProperties.tempDir();
-            File tempDir = new File(tempDirPath);
-            if (!tempDir.exists()) {
-                if (tempDir.mkdirs()) {
-                    throw new InternalServerException();
-                }
-            }
-
-            String filename = properties.getFilename();
-            String filePath = tempDirPath + "/" + filename;
+            String filePath = logfulProperties.tempDir() + "/" + properties.getFilename();
             File file = new File(filePath);
+
             try {
-                logFile.transferTo(file);
-                // Check uploaded file sum.
+                FileUtil.transferTo(logFile, file);
                 String sum = Checksum.fileMD5(file.getAbsolutePath());
                 if (!sum.equalsIgnoreCase(properties.getFileSum())) {
                     throw new InternalServerException();
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new InternalServerException();
             }
 
@@ -432,27 +447,29 @@ public class ClientRestController extends BaseRestController {
         }
     }
 
-    private void v1UploadCrashReport(String platform,
-                                     String uid,
-                                     String appId,
+    private void v1UploadCrashReport(CrashFileMeta fileMeta,
                                      String fileSum,
                                      MultipartFile reportFile) {
-        String reportDirPath = logfulProperties.crashReportDir(platform) + "/" + appId + "/" + uid;
-        File reportDir = new File(reportDirPath);
-        if (!reportDir.exists()) {
-            if (!reportDir.mkdirs()) {
-                throw new InternalServerException();
+        if (weedFSClientService.writeQueueSize() < logfulProperties.getWeed().getQueueCapacity()) {
+            String key = StringUtil.randomUid();
+            String extension = FilenameUtils.getExtension(reportFile.getOriginalFilename());
+            if (StringUtils.isNotEmpty(extension)) {
+                String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
+                File file = new File(filePath);
+                try {
+                    FileUtil.transferTo(reportFile, file);
+                    String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
+                    if (!fileSumString.equalsIgnoreCase(fileSum)) {
+                        throw new InternalServerException();
+                    }
+                    weedFSClientService.write(WeedFSMeta.create(key, extension, fileMeta));
+                } catch (Exception e) {
+                    throw new InternalServerException();
+                }
+            } else {
+                throw new BadRequestException();
             }
-        }
-
-        File file = new File(reportDirPath + "/" + reportFile.getOriginalFilename());
-        try {
-            reportFile.transferTo(file);
-            String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
-            if (!fileSumString.equalsIgnoreCase(fileSum)) {
-                throw new InternalServerException();
-            }
-        } catch (IOException e) {
+        } else {
             throw new InternalServerException();
         }
     }
@@ -467,24 +484,16 @@ public class ClientRestController extends BaseRestController {
             String key = StringUtil.attachmentKey(platform, uid, appId, attachmentId);
             String extension = FilenameUtils.getExtension(attachmentFile.getOriginalFilename());
             if (!StringUtil.isEmpty(key) && !StringUtil.isEmpty(extension)) {
-                File dir = new File(logfulProperties.weedDir());
-                if (!dir.exists()) {
-                    if (!dir.mkdirs()) {
-                        throw new InternalServerException();
-                    }
-                }
                 String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
                 File file = new File(filePath);
                 try {
-                    attachmentFile.transferTo(file);
-                    // Check uploaded file sum
+                    FileUtil.transferTo(attachmentFile, file);
                     String fileSumString = Checksum.fileMD5(file.getAbsolutePath());
                     if (!fileSumString.equalsIgnoreCase(fileSum)) {
                         throw new InternalServerException();
                     }
-                    // Write attachment file to weed fs.
                     weedFSClientService.write(WeedFSMeta.create(key, extension, AttachFileMeta.create(key)));
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new InternalServerException();
                 }
             } else {
@@ -506,6 +515,7 @@ public class ClientRestController extends BaseRestController {
 
             String filename = StringUtil.randomUid();
 
+            properties.setClientId(applicationKeyPairManager.getClientId());
             properties.setSecurity(security);
             properties.setFilename(filename);
             properties.setOriginalFilename(originalFilename);

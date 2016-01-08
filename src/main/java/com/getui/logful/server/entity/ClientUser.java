@@ -17,6 +17,7 @@ public class ClientUser {
     private int platform;
     private String clientId;
     private String uid;
+    private String deviceId;
     private String alias;
     private String model;
     private String imei;
@@ -27,6 +28,14 @@ public class ClientUser {
     private String versionString;
     private int level;
     private boolean recordOn;
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
 
     public String getClientId() {
         return clientId;

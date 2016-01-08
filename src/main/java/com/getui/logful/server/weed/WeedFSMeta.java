@@ -1,6 +1,7 @@
 package com.getui.logful.server.weed;
 
 import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.LogFileMeta;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
@@ -14,6 +15,8 @@ public class WeedFSMeta {
     public static final int TYPE_LOG = 0x01;
 
     public static final int TYPE_ATTACHMENT = 0x02;
+
+    public static final int TYPE_CRASH = 0x03;
 
     public static final int STATE_NORMAL = 0x01;
 
@@ -40,6 +43,8 @@ public class WeedFSMeta {
 
     private AttachFileMeta attachFileMeta;
 
+    private CrashFileMeta crashFileMeta;
+
     public WeedFSMeta() {
         this.status = STATE_NORMAL;
         this.writeDate = new Date();
@@ -63,10 +68,27 @@ public class WeedFSMeta {
         return weedFSMeta;
     }
 
+    public static WeedFSMeta create(String key, String extension, CrashFileMeta meta) {
+        WeedFSMeta weedFSMeta = new WeedFSMeta();
+        weedFSMeta.type = TYPE_CRASH;
+        weedFSMeta.key = key;
+        weedFSMeta.extension = extension;
+        weedFSMeta.crashFileMeta = meta;
+        return weedFSMeta;
+    }
+
     public static WeedFSMeta create(byte[] response) {
         WeedFSMeta weedFSMeta = new WeedFSMeta();
         weedFSMeta.response = response;
         return weedFSMeta;
+    }
+
+    public CrashFileMeta getCrashFileMeta() {
+        return crashFileMeta;
+    }
+
+    public void setCrashFileMeta(CrashFileMeta crashFileMeta) {
+        this.crashFileMeta = crashFileMeta;
     }
 
     public Date getWriteDate() {

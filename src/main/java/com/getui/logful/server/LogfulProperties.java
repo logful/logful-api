@@ -20,10 +20,47 @@ public class LogfulProperties {
     private Weed weed;
 
     private Graylog graylog;
+
+    @Value("${logful.push.sdk.getui.id}")
+    private String getuiId;
+
+    @Value("${logful.push.sdk.getui.key}")
+    private String getuiKey;
+
+    @Value("${logful.push.sdk.getui.secret}")
+    private String getuiSecret;
+
+    @Value("${logful.push.sdk.jpush.key}")
+    private String jpushKey;
+
+    @Value("${logful.push.sdk.jpush.secret}")
+    private String jpushSecret;
+
     @Value("${security.oauth2.client.refresh-token-validity-seconds}")
     private Integer refreshTokenValiditySeconds;
+
     @Value("${security.oauth2.client.access-token-validity-seconds}")
     private Integer accessTokenValiditySeconds;
+
+    public String getGetuiId() {
+        return getuiId;
+    }
+
+    public String getGetuiKey() {
+        return getuiKey;
+    }
+
+    public String getGetuiSecret() {
+        return getuiSecret;
+    }
+
+    public String getJpushKey() {
+        return jpushKey;
+    }
+
+    public String getJpushSecret() {
+        return jpushSecret;
+    }
 
     public Integer getAccessTokenValiditySeconds() {
         return accessTokenValiditySeconds;
@@ -38,7 +75,7 @@ public class LogfulProperties {
     }
 
     public void setTtl(String ttl) {
-        this.ttlSeconds = StringUtil.weedTTLToSecond(ttl);
+        this.ttlSeconds = StringUtil.durationToSecond(ttl);
         this.ttl = ttl;
     }
 

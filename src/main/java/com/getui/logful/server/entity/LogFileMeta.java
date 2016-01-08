@@ -1,5 +1,6 @@
 package com.getui.logful.server.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.getui.logful.server.util.StringUtil;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -13,34 +14,29 @@ public class LogFileMeta {
     private String id;
 
     private short platform;
-
+    private String clientId;
     private String uid;
-
     private String appId;
-
     private String loggerName;
-
-    private String date;
-
+    private Date date;
     private short level;
-
     private int fragment;
-
     private String fid;
-
     private long size;
-
+    @JsonIgnore
     private Date writeDate;
 
     public static LogFileMeta create(short platform,
-                                         String uid,
-                                         String appId,
-                                         String loggerName,
-                                         String date,
-                                         short level,
-                                         int fragment) {
+                                     String clientId,
+                                     String uid,
+                                     String appId,
+                                     String loggerName,
+                                     Date date,
+                                     short level,
+                                     int fragment) {
         LogFileMeta meta = new LogFileMeta();
         meta.setPlatform(platform);
+        meta.setClientId(clientId);
         meta.setUid(uid);
         meta.setAppId(appId);
         meta.setLoggerName(loggerName);
@@ -51,6 +47,22 @@ public class LogFileMeta {
         return meta;
     }
 
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
     public Date getWriteDate() {
         return writeDate;
     }
@@ -59,13 +71,6 @@ public class LogFileMeta {
         this.writeDate = writeDate;
     }
 
-    public String getDate() {
-        return date;
-    }
-
-    public void setDate(String date) {
-        this.date = date;
-    }
 
     public String getId() {
         return id;

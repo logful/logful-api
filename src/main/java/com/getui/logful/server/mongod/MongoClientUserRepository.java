@@ -7,17 +7,18 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public class MongoUserInfoRepository {
+public class MongoClientUserRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoUserInfoRepository(MongoOperations operations) {
+    public MongoClientUserRepository(MongoOperations operations) {
         this.operations = operations;
     }
 
@@ -45,6 +46,11 @@ public class MongoUserInfoRepository {
             clientUser.setId(exist.getId());
         }
         operations.save(clientUser);
+    }
+
+    public boolean bindDeviceId(Criteria criteria, String deviceId) {
+        WriteResult result = operations.updateFirst(new Query(criteria), Update.update("deviceId", deviceId), ClientUser.class);
+        return result.getN() == 1;
     }
 
     public ClientUser findByUid(String uid) {
@@ -78,6 +84,10 @@ public class MongoUserInfoRepository {
 
     public List<ClientUser> findAll(Criteria criteria) {
         Query query = new Query(criteria);
+        return operations.find(query, ClientUser.class);
+    }
+
+    public List<ClientUser> findAll(Query query) {
         return operations.find(query, ClientUser.class);
     }
 

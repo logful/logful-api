@@ -72,6 +72,8 @@ public class Constants {
 
     public static final int DEFAULT_GRAY_LEVEL = 100;
 
+    public static final int PLATFORM_ALL = 0;
+
     public static final int PLATFORM_ANDROID = 1;
 
     public static final int PLATFORM_IOS = 2;

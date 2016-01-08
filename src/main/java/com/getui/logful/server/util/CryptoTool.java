@@ -1,6 +1,5 @@
 package com.getui.logful.server.util;
 
-import com.getui.logful.server.Constants;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.slf4j.Logger;
@@ -12,12 +11,14 @@ public class CryptoTool {
 
     private static final Logger LOG = LoggerFactory.getLogger(CryptoTool.class);
 
+    private static byte[] errorBytes = new byte[]{0x00, 0x00};
+
     public static synchronized String AESDecrypt(byte[] security, byte[] data, int version) {
         if (security == null || data == null) {
             return null;
         }
 
-        if (ArrayUtils.isEquals(data, Constants.CRYPTO_ERROR.getBytes())) {
+        if (ArrayUtils.isEquals(data, errorBytes)) {
             return null;
         }
 

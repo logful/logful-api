@@ -6,13 +6,16 @@ import com.getui.logful.server.util.StringUtil;
 import com.getui.logful.server.weed.WeedFSMeta;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.pojava.datetime.DateTime;
 
+import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LogFileProperties {
 
     private final ConcurrentHashMap<Integer, String> layoutMap = new ConcurrentHashMap<>();
     private int platform;
+    private String clientId;
     private String uid;
     private String appId;
     private int level;
@@ -31,6 +34,14 @@ public class LogFileProperties {
     public LogFileProperties() {
         this.key = StringUtil.randomUid();
         this.extension = Constants.LOG_FILE_EXTENSION;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     public int getPlatform() {
@@ -193,11 +204,11 @@ public class LogFileProperties {
         if (temp.length != 4) {
             return null;
         }
-        String date = temp[1];
+        String dateString = temp[1];
         try {
+            Date date = DateTime.parse(dateString).toDate();
             int fragment = Integer.parseInt(temp[3]);
-            LogFileMeta meta = LogFileMeta.create((short) platform, uid,
-                    appId, loggerName, date, (short) level, fragment);
+            LogFileMeta meta = LogFileMeta.create((short) platform, clientId, uid, appId, loggerName, date, (short) level, fragment);
             return WeedFSMeta.create(key, extension, meta);
         } catch (Exception e) {
             return null;

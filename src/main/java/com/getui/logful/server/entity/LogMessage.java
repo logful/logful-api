@@ -82,6 +82,13 @@ public class LogMessage {
         return logMessage;
     }
 
+    public static LogMessage create(CrashFileMeta fileMeta) {
+        return LogMessage.create(fileMeta.getPlatform(), fileMeta.getUid(),
+                fileMeta.getAppId(), "crash", null, Constants.FATAL,
+                fileMeta.getDate().getTime(), "CRASH_FILE_ID",
+                fileMeta.getId(), fileMeta.getAlias(), null);
+    }
+
     public Date getWriteDate() {
         return writeDate;
     }

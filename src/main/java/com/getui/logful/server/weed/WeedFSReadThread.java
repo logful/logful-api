@@ -1,9 +1,14 @@
 package com.getui.logful.server.weed;
 
+import com.getui.logful.server.Constants;
 import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.LogFileMeta;
+import com.getui.logful.server.entity.LogMessage;
 import com.getui.logful.server.mongod.AttachFileMetaRepository;
+import com.getui.logful.server.mongod.CrashFileMetaRepository;
 import com.getui.logful.server.mongod.LogFileMetaRepository;
+import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.util.StringUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -27,6 +32,8 @@ public class WeedFSReadThread {
     public WeedFSReadThread(final String dirPath,
                             final LogFileMetaRepository logRepository,
                             final AttachFileMetaRepository attachRepository,
+                            final CrashFileMetaRepository crashRepository,
+                            final GraylogClientService graylogService,
                             final WeedQueueRepository queueRepository,
                             final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap,
                             final BlockingQueue<WeedFSMeta> queue) {
@@ -77,6 +84,19 @@ public class WeedFSReadThread {
 
                                                     // Save attachment file meta to db.
                                                     attachRepository.save(attachFileMeta);
+                                                }
+                                            } else if (meta.getType() == WeedFSMeta.TYPE_CRASH) {
+                                                // Crash file.
+                                                CrashFileMeta crashFileMeta = meta.getCrashFileMeta();
+                                                if (crashFileMeta != null) {
+                                                    crashFileMeta.setFid(fid);
+                                                    crashFileMeta.setSize(size);
+
+                                                    // Save crash file meta to db.
+                                                    crashRepository.save(crashFileMeta);
+
+                                                    // Send to graylog.
+                                                    graylogService.send(LogMessage.create(crashFileMeta));
                                                 }
                                             }
                                             // Remove WeedFSMeta form map.

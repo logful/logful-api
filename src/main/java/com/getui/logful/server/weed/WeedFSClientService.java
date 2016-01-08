@@ -4,7 +4,9 @@ import com.getui.logful.server.LogfulProperties;
 import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.entity.LogFileMeta;
 import com.getui.logful.server.mongod.AttachFileMetaRepository;
+import com.getui.logful.server.mongod.CrashFileMetaRepository;
 import com.getui.logful.server.mongod.LogFileMetaRepository;
+import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.util.StringUtil;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
@@ -53,6 +55,12 @@ public class WeedFSClientService implements ChannelFutureListener {
 
     @Autowired
     private AttachFileMetaRepository attachFileMetaRepository;
+
+    @Autowired
+    private CrashFileMetaRepository crashFileMetaRepository;
+
+    @Autowired
+    private GraylogClientService graylogClientService;
 
     @Autowired
     private WeedQueueRepository weedQueueRepository;
@@ -147,6 +155,8 @@ public class WeedFSClientService implements ChannelFutureListener {
         final WeedFSReadThread readThread = new WeedFSReadThread(weedDir,
                 logFileMetaRepository,
                 attachFileMetaRepository,
+                crashFileMetaRepository,
+                graylogClientService,
                 weedQueueRepository,
                 weedMetaMap,
                 queue.readQueue);

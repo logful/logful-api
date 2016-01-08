@@ -1,14 +1,13 @@
 package com.getui.logful.server.rest;
 
 import com.getui.logful.server.entity.ClientUser;
-import com.getui.logful.server.mongod.MongoUserInfoRepository;
-import com.getui.logful.server.mongod.QueryCondition;
+import com.getui.logful.server.mongod.MongoClientUserRepository;
 import com.getui.logful.server.util.ControllerUtil;
-import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
@@ -19,36 +18,17 @@ import java.util.List;
 public class UserRestController extends BaseRestController {
 
     @Autowired
-    private MongoUserInfoRepository mongoUserInfoRepository;
+    private MongoClientUserRepository mongoClientUserRepository;
 
-    @RequestMapping(value = "/api/users",
+    @RequestMapping(value = "/api/user",
             method = RequestMethod.GET,
             produces = ControllerUtil.CONTENT_TYPE,
             headers = ControllerUtil.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String listUser(final WebRequest request) {
-        QueryCondition condition = new QueryCondition(request);
-
-        String platform = request.getParameter("platform");
-
-        if (!StringUtils.isNumeric(platform)) {
-            throw new BadRequestException();
-        }
-
-        Criteria criteria = Criteria.where("platform").is(Integer.parseInt(platform));
-
-        String[] keys = {"alias", "model", "imei", "macAddress", "osVersion", "appId", "versionString"};
-        for (String key : keys) {
-            addCriteria(criteria, key, request.getParameter(key));
-        }
-
-        String version = request.getParameter("version");
-        if (StringUtils.isNumeric(version)) {
-            criteria.and("version").is(Integer.parseInt(version));
-        }
-
-        List<ClientUser> users = mongoUserInfoRepository.findAll(condition, criteria);
+        Query query = queryCondition(request);
+        List<ClientUser> users = mongoClientUserRepository.findAll(query);
         return listToJson(users);
     }
 
@@ -60,7 +40,7 @@ public class UserRestController extends BaseRestController {
     @ResponseBody
     public String viewUser(@PathVariable String uid) {
         Criteria criteria = Criteria.where("uid").is(uid);
-        List<ClientUser> users = mongoUserInfoRepository.findAll(criteria);
+        List<ClientUser> users = mongoClientUserRepository.findAll(criteria);
         if (users != null && users.size() > 0) {
             JSONArray array = new JSONArray();
             for (ClientUser user : users) {

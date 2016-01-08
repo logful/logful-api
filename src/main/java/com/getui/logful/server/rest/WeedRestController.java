@@ -71,11 +71,9 @@ public class WeedRestController extends BaseRestController {
         Request request = new Request.Builder().url(url).build();
         try {
             Response response = client.newCall(request).execute();
-
             HttpStatus code = HttpStatus.valueOf(response.code());
             if (code == HttpStatus.OK) {
                 Headers headers = response.headers();
-
                 HttpHeaders newHeaders = new HttpHeaders();
                 newHeaders.set("Etag", headers.get("Etag"));
                 newHeaders.set("Content-Type", headers.get("Content-Type"));
