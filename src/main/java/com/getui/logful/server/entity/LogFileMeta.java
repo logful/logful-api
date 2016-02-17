@@ -1,8 +1,8 @@
 package com.getui.logful.server.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.getui.logful.server.util.StringUtil;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -14,15 +14,31 @@ public class LogFileMeta {
     private String id;
 
     private short platform;
+
+    @Indexed
     private String clientId;
+
+    @Indexed
     private String uid;
+
+    @Indexed
     private String appId;
+
+    @Indexed
     private String loggerName;
+
+    @Indexed
     private Date date;
+
     private short level;
+
     private int fragment;
+
+    @Indexed
     private String fid;
+
     private long size;
+
     @JsonIgnore
     private Date writeDate;
 
@@ -70,7 +86,6 @@ public class LogFileMeta {
     public void setWriteDate(Date writeDate) {
         this.writeDate = writeDate;
     }
-
 
     public String getId() {
         return id;
@@ -142,9 +157,5 @@ public class LogFileMeta {
 
     public void setSize(long size) {
         this.size = size;
-    }
-
-    public String originalFilename() {
-        return loggerName + "-" + date + "-" + StringUtil.levelString(level) + "-" + fragment;
     }
 }

@@ -1,9 +1,9 @@
 package com.getui.logful.server.mongod;
 
-import com.getui.logful.server.entity.ControlProfile;
 import com.getui.logful.server.entity.ClientUser;
-import com.getui.logful.server.util.StringUtil;
+import com.getui.logful.server.entity.ControlProfile;
 import com.mongodb.WriteResult;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -13,17 +13,17 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class MongoControlProfileRepository {
+public class ControlProfileRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoControlProfileRepository(MongoOperations operations) {
+    public ControlProfileRepository(MongoOperations operations) {
         this.operations = operations;
     }
 
     public boolean save(ControlProfile profile) {
-        if (!StringUtil.isEmpty(profile.getId())) {
+        if (!StringUtils.isEmpty(profile.getId())) {
             // Update record.
             operations.save(profile);
             return true;

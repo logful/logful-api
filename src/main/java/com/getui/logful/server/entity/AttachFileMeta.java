@@ -1,6 +1,8 @@
 package com.getui.logful.server.entity;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -11,10 +13,13 @@ public class AttachFileMeta {
     @Id
     private String id;
 
+    @Indexed
     private String fid;
 
+    @Indexed
     private String attachmentId;
 
+    @JsonIgnore
     private Date writeDate;
 
     private long size;

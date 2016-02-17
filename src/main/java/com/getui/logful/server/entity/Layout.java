@@ -1,7 +1,5 @@
 package com.getui.logful.server.entity;
 
-import com.getui.logful.server.Constants;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Layout {
@@ -13,7 +11,7 @@ public class Layout {
     public Layout(String template) {
         String[] elements = template.split("\\|");
         for (String element : elements) {
-            String[] attributes = element.split(Constants.DEFAULT_ATTRIBUTE_SEPARATOR);
+            String[] attributes = element.split(",");
             if (attributes.length == 3) {
                 String abbreviation = attributes[0];
                 String fullName = attributes[1];

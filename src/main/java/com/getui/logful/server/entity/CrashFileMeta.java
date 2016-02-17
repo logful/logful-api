@@ -2,6 +2,7 @@ package com.getui.logful.server.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
@@ -11,22 +12,63 @@ public class CrashFileMeta {
 
     @Id
     private String id;
+
     private short platform;
+
+    @Indexed
     private String clientId;
+
+    @Indexed
     private String uid;
+
+    @Indexed
     private String alias;
+
+    @Indexed
     private String model;
+
+    @Indexed
     private String imei;
+
+    @Indexed
     private String macAddress;
+
+    @Indexed
     private String osVersion;
+
+    @Indexed
     private String appId;
+
     private int version;
+
+    @Indexed
     private String versionString;
+
+    @Indexed
+    private String cause;
+
+    @Indexed
     private Date date;
+
+    @Indexed
     private String fid;
+
     private long size;
+
     @JsonIgnore
     private Date writeDate;
+
+    public CrashFileMeta() {
+        this.writeDate = new Date();
+    }
+
+    public String getCause() {
+        return cause;
+    }
+
+    public void setCause(String cause) {
+        this.cause = cause;
+    }
 
     public String getClientId() {
         return clientId;

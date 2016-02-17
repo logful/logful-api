@@ -2,19 +2,55 @@ package com.getui.logful.server.push;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MessagePayload {
 
+    private long timestamp;
+    private boolean interrupt;
     private boolean on;
     private long interval;
     private long frequency;
-    private PushParams params;
+    private List<String> clientIds;
+    private List<String> aliases;
 
-    public PushParams getParams() {
-        return params;
+    public List<String> getAliases() {
+        if (aliases == null) {
+            return new ArrayList<>();
+        }
+        return aliases;
     }
 
-    public void setParams(PushParams params) {
-        this.params = params;
+    public void setAliases(List<String> aliases) {
+        this.aliases = aliases;
+    }
+
+    public List<String> getClientIds() {
+        if (clientIds == null) {
+            return new ArrayList<>();
+        }
+        return clientIds;
+    }
+
+    public void setClientIds(List<String> clientIds) {
+        this.clientIds = clientIds;
+    }
+
+    public boolean isInterrupt() {
+        return interrupt;
+    }
+
+    public void setInterrupt(boolean interrupt) {
+        this.interrupt = interrupt;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
     }
 
     public long getInterval() {
@@ -42,10 +78,17 @@ public class MessagePayload {
     }
 
     public String payload() {
+        JSONObject root = new JSONObject();
+
         JSONObject object = new JSONObject();
+        object.put("timestamp", timestamp);
         object.put("on", on);
+        object.put("interrupt", interrupt);
         object.put("interval", interval);
         object.put("frequency", frequency);
-        return object.toString();
+
+        root.put("logful", object);
+
+        return root.toString();
     }
 }

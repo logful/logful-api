@@ -1,12 +1,11 @@
 package com.getui.logful.server.parse;
 
 import com.getui.logful.server.GlobalReference;
-import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.ServerProperties;
 import com.getui.logful.server.entity.Layout;
 import com.getui.logful.server.entity.LayoutItem;
 import com.getui.logful.server.entity.LogMessage;
-import com.getui.logful.server.mongod.MongoLogMessageRepository;
-import com.getui.logful.server.util.StringUtil;
+import com.getui.logful.server.mongod.LogMessageRepository;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import org.apache.commons.lang.StringUtils;
@@ -28,10 +27,10 @@ public class GraylogClientService implements SenderInterface {
     private static final Logger LOG = LoggerFactory.getLogger(GraylogClientService.class);
 
     @Autowired
-    LogfulProperties logfulProperties;
+    ServerProperties serverProperties;
 
     @Autowired
-    MongoLogMessageRepository mongoLogMessageRepository;
+    LogMessageRepository logMessageRepository;
 
     private AtomicBoolean connected = new AtomicBoolean(false);
 
@@ -39,10 +38,10 @@ public class GraylogClientService implements SenderInterface {
 
     @PostConstruct
     public void create() {
-        MongoOperations operations = mongoLogMessageRepository.getOperations();
+        MongoOperations operations = logMessageRepository.getOperations();
         try {
             BasicDBObject index = new BasicDBObject("writeDate", 1);
-            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", serverProperties.expires());
 
             DBCollection collection = operations.getCollection(operations.getCollectionName(LogMessage.class));
             collection.createIndex(index, options);
@@ -50,10 +49,10 @@ public class GraylogClientService implements SenderInterface {
             LOG.error("Exception", e);
         }
 
-        String host = logfulProperties.graylogHost();
-        int port = logfulProperties.graylogPort();
+        String host = serverProperties.graylogHost();
+        int port = serverProperties.graylogPort();
 
-        if (StringUtil.isEmpty(host)) {
+        if (StringUtils.isEmpty(host)) {
             throw new IllegalArgumentException("Graylog host can not be null!");
         }
 
@@ -64,11 +63,11 @@ public class GraylogClientService implements SenderInterface {
         InetSocketAddress socketAddress = new InetSocketAddress(host, port);
         GelfConfiguration config = new GelfConfiguration(socketAddress)
                 .transport(GelfTransports.TCP)
-                .queueSize(logfulProperties.getGraylog().getQueueCapacity())
-                .connectTimeout(logfulProperties.getGraylog().getConnectTimeout())
-                .reconnectDelay(logfulProperties.getGraylog().getReconnectDelay())
+                .queueSize(serverProperties.getGraylog().getQueueCapacity())
+                .connectTimeout(serverProperties.getGraylog().getConnectTimeout())
+                .reconnectDelay(serverProperties.getGraylog().getReconnectDelay())
                 .tcpNoDelay(true)
-                .sendBufferSize(logfulProperties.getGraylog().getSendBufferSize());
+                .sendBufferSize(serverProperties.getGraylog().getSendBufferSize());
         graylogTransport = GelfTransports.create(config);
         graylogTransport.setListener(new GelfTransportListener() {
             @Override
@@ -85,13 +84,13 @@ public class GraylogClientService implements SenderInterface {
             public void retrySuccessful(LogMessage logMessage) {
                 if (logMessage.getId() != null && logMessage.getId().length() > 0) {
                     logMessage.setStatus(LogMessage.STATE_SUCCESSFUL);
-                    mongoLogMessageRepository.save(logMessage);
+                    logMessageRepository.save(logMessage);
                 }
             }
 
             @Override
             public void failed(LogMessage logMessage) {
-                mongoLogMessageRepository.save(logMessage);
+                logMessageRepository.save(logMessage);
             }
         });
     }
@@ -107,12 +106,12 @@ public class GraylogClientService implements SenderInterface {
                 try {
                     write(message);
                 } catch (InterruptedException e) {
-                    mongoLogMessageRepository.save(logMessage);
+                    logMessageRepository.save(logMessage);
                     LOG.error("Exception", e);
                 }
             }
         } else {
-            mongoLogMessageRepository.save(logMessage);
+            logMessageRepository.save(logMessage);
         }
     }
 
@@ -218,7 +217,7 @@ public class GraylogClientService implements SenderInterface {
         return result;
     }
 
-    private class NumberParseResult {
+    private static class NumberParseResult {
 
         private boolean successful;
 

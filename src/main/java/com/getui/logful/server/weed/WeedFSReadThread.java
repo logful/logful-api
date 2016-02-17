@@ -1,6 +1,5 @@
 package com.getui.logful.server.weed;
 
-import com.getui.logful.server.Constants;
 import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.LogFileMeta;
@@ -9,9 +8,9 @@ import com.getui.logful.server.mongod.AttachFileMetaRepository;
 import com.getui.logful.server.mongod.CrashFileMetaRepository;
 import com.getui.logful.server.mongod.LogFileMetaRepository;
 import com.getui.logful.server.parse.GraylogClientService;
-import com.getui.logful.server.util.StringUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -46,12 +45,11 @@ public class WeedFSReadThread {
 
                 while (running.get()) {
                     lock.lock();
-
                     try {
                         if (weedFSMeta == null) {
                             weedFSMeta = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
-                        if (weedFSMeta != null && !StringUtil.isEmpty(dirPath)) {
+                        if (weedFSMeta != null && !StringUtils.isEmpty(dirPath)) {
                             try {
                                 JSONObject object = weedFSMeta.responseObject();
                                 if (object != null) {
@@ -103,7 +101,7 @@ public class WeedFSReadThread {
                                             weedMetaMap.remove(key);
                                         }
 
-                                        if (!StringUtil.isEmpty(weedFSMeta.getId())) {
+                                        if (!StringUtils.isEmpty(weedFSMeta.getId())) {
                                             weedFSMeta.setStatus(WeedFSMeta.STATE_SUCCESSFUL);
                                             queueRepository.save(weedFSMeta);
                                         }
@@ -120,8 +118,9 @@ public class WeedFSReadThread {
                         }
                     } catch (InterruptedException e) {
                         // Ignore all exception.
+                    } finally {
+                        lock.unlock();
                     }
-                    lock.unlock();
                 }
             }
         };

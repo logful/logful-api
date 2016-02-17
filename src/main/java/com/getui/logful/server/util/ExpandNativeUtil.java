@@ -43,7 +43,6 @@ public class ExpandNativeUtil {
                 throw new RuntimeException("Create native lib file failed.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException("Copy native lib failed.", e);
         }
     }

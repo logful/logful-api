@@ -1,15 +1,12 @@
 package com.getui.logful.server.util;
 
 import com.getui.logful.server.Constants;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.UUID;
 
 public class StringUtil {
-
-    public static boolean isEmpty(String string) {
-        return !(string != null && string.length() > 0);
-    }
 
     public static String randomUid() {
         return UUID.randomUUID().toString().replace("-", "").toLowerCase();
@@ -87,17 +84,17 @@ public class StringUtil {
 
     public static String attachmentKey(int platform, String uid, String appId, String attachmentId) {
         String temp = String.valueOf(platform) + "-" + uid + "-" + appId.toLowerCase() + "-" + attachmentId;
-        return Checksum.md5(temp);
+        return DigestUtils.md5Hex(temp);
     }
 
     public static boolean decryptError(String message) {
-        return isEmpty(message) || StringUtils.equals(message, Constants.CRYPTO_ERROR);
+        return StringUtils.isEmpty(message) || StringUtils.equals(message, Constants.CRYPTO_ERROR);
     }
 
     private static final long SECONDS_PER_DAY = 24L * 3600;
 
     public static long durationToSecond(String ttl) {
-        if (StringUtil.isEmpty(ttl)) {
+        if (StringUtils.isEmpty(ttl)) {
             throw new IllegalArgumentException("No ttl specify!");
         }
         int length = ttl.length();

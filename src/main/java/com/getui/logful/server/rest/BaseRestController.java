@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.getui.logful.server.mongod.QueryCondition;
 import com.getui.logful.server.util.DateTimeUtil;
 import org.apache.commons.lang.StringUtils;
-import org.json.JSONObject;
 import org.pojava.datetime.DateTime;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -19,35 +18,49 @@ import java.util.List;
 
 public class BaseRestController {
 
+    public static final String HEADER = "Accept=application/json";
+    public static final String APPLICATION_JSON = "application/json";
+    public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+    private static final String[] FIELD_KEYS = {"id", "clientId", "uid", "alias", "model", "imei",
+            "macAddress", "osVersion", "appId", "versionString"};
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     public String ok() {
-        JSONObject object = new JSONObject();
-        object.put("status", "200 OK");
-        return object.toString();
+        return "{\"status\":\"200 OK\"}";
     }
 
     public String deleted() {
-        JSONObject object = new JSONObject();
-        object.put("status", "204 DELETED");
-        return object.toString();
+        return "{\"status\":\"204 DELETED\"}";
     }
 
     public String created() {
-        JSONObject object = new JSONObject();
-        object.put("status", "201 Created");
-        return object.toString();
+        return "{\"status\":\"201 CREATED\"}";
     }
 
     public String updated() {
-        JSONObject object = new JSONObject();
-        object.put("updatedAt", DateTimeUtil.timeString(System.currentTimeMillis()));
-        return object.toString();
+        return "{\"updatedAt\":\"" + DateTimeUtil.currentTimeString() + "\"}";
+    }
+
+    public String accepted() {
+        return "{\"status\":\"202 ACCEPTED\"}";
+    }
+
+    public static int queueCapacity(int capacity) {
+        if (capacity == 1) {
+            return capacity;
+        }
+        int buffer = capacity / 32;
+        if (buffer == 0) {
+            buffer = 1;
+        }
+        return capacity - buffer;
     }
 
     public Query queryCondition(WebRequest request) {
         QueryCondition condition = new QueryCondition(request);
         Query query = new Query();
-        String[] keys = {"id", "clientId", "uid", "alias", "model", "imei", "macAddress", "osVersion", "appId", "versionString"};
-        for (String key : keys) {
+        for (String key : FIELD_KEYS) {
             String temp = request.getParameter(key);
             if (StringUtils.isNotEmpty(temp)) {
                 query.addCriteria(Criteria.where(key).is(temp));
@@ -89,7 +102,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.BAD_REQUEST)
-    public class BadRequestException extends RuntimeException {
+    public static class BadRequestException extends RuntimeException {
         public BadRequestException() {
             super();
         }
@@ -99,11 +112,10 @@ public class BaseRestController {
         }
     }
 
-    public String listToJson(List<?> list) {
+    public String writeListAsJson(List<?> list) {
         if (list != null) {
             try {
                 StringWriter writer = new StringWriter();
-                ObjectMapper mapper = new ObjectMapper();
                 mapper.writeValue(writer, list);
                 writer.close();
                 return writer.toString();
@@ -115,7 +127,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.FORBIDDEN)
-    public class ForbiddenException extends RuntimeException {
+    public static class ForbiddenException extends RuntimeException {
         public ForbiddenException() {
             super();
         }
@@ -126,7 +138,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.NOT_FOUND)
-    public class NotFoundException extends RuntimeException {
+    public static class NotFoundException extends RuntimeException {
         public NotFoundException() {
             super();
         }
@@ -137,7 +149,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.NOT_ACCEPTABLE)
-    public class NotAcceptableException extends RuntimeException {
+    public static class NotAcceptableException extends RuntimeException {
         public NotAcceptableException() {
             super();
         }
@@ -148,7 +160,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.GONE)
-    public class GoneException extends RuntimeException {
+    public static class GoneException extends RuntimeException {
         public GoneException() {
             super();
         }
@@ -159,7 +171,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.UNPROCESSABLE_ENTITY)
-    public class UnprocessableEntityException extends RuntimeException {
+    public static class UnprocessableEntityException extends RuntimeException {
         public UnprocessableEntityException() {
             super();
         }
@@ -170,7 +182,7 @@ public class BaseRestController {
     }
 
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public class InternalServerException extends RuntimeException {
+    public static class InternalServerException extends RuntimeException {
         public InternalServerException() {
             super();
         }

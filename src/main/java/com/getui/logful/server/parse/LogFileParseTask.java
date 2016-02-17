@@ -51,7 +51,7 @@ public class LogFileParseTask implements Runnable, LogFileParser.ParserEventList
                 senderList.add(graylogService);
             }
             senderList.add(localFileSender);
-            new LogFileParser(this).parse(properties.getSecurity(), properties.getCryptoVersion(), stream);
+            new LogFileParser(this).parse(properties.getAppId(), properties.isCompatible(), properties.getSecurity(), stream);
         } catch (Exception e) {
             LOG.error("Exception", e);
             // TODO

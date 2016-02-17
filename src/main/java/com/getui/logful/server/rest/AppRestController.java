@@ -1,11 +1,10 @@
 package com.getui.logful.server.rest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.ServerProperties;
 import com.getui.logful.server.auth.model.SimpleClientDetails;
-import com.getui.logful.server.mongod.ApplicationRepository;
-import com.getui.logful.server.mongod.QueryCondition;
-import com.getui.logful.server.util.ControllerUtil;
+import com.getui.logful.server.mongod.*;
 import com.getui.logful.server.util.RSAUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
@@ -24,27 +23,38 @@ import java.util.UUID;
 public class AppRestController extends BaseRestController {
 
     @Autowired
-    LogfulProperties logfulProperties;
+    ServerProperties serverProperties;
 
     @Autowired
     ApplicationRepository applicationRepository;
 
+    @Autowired
+    ClientUserRepository clientUserRepository;
+
+    @Autowired
+    LogFileMetaRepository logFileMetaRepository;
+
+    @Autowired
+    CrashFileMetaRepository crashFileMetaRepository;
+
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     @RequestMapping(value = "/api/app",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String listApps(WebRequest request) {
         QueryCondition condition = new QueryCondition(request);
         List<SimpleClientDetails> apps = applicationRepository.findAll(condition);
-        return listToJson(apps);
+        return writeListAsJson(apps);
     }
 
     @RequestMapping(value = "/api/app",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public String createApp(@RequestBody String payload) {
@@ -55,10 +65,11 @@ public class AppRestController extends BaseRestController {
             if (StringUtils.isNotEmpty(name)) {
                 SimpleClientDetails simpleClientDetails = new SimpleClientDetails();
 
-                simpleClientDetails.setAccessTokenValiditySeconds(logfulProperties.getAccessTokenValiditySeconds());
-                simpleClientDetails.setRefreshTokenValiditySeconds(logfulProperties.getRefreshTokenValiditySeconds());
+                simpleClientDetails.setAccessTokenValiditySeconds(serverProperties.getAccessTokenValiditySeconds());
+                simpleClientDetails.setRefreshTokenValiditySeconds(serverProperties.getRefreshTokenValiditySeconds());
 
                 simpleClientDetails.setName(name);
+                simpleClientDetails.setDescription(object.optString("description"));
                 simpleClientDetails.setCreateDate(new Date());
 
                 simpleClientDetails.authorizedGrantTypes("refresh_token", "client_credentials");
@@ -86,8 +97,8 @@ public class AppRestController extends BaseRestController {
 
     @RequestMapping(value = "/api/app/{id}",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
     public SimpleClientDetails getDetail(@PathVariable String id) {
@@ -101,41 +112,71 @@ public class AppRestController extends BaseRestController {
 
     @RequestMapping(value = "/api/app/{id}",
             method = RequestMethod.PUT,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.CREATED)
     @ResponseBody
-    public String updateApp(@PathVariable String id, @RequestBody String payload) {
+    public SimpleClientDetails updateApp(@PathVariable String id, @RequestBody String payload) {
         try {
             SimpleClientDetails temp = new ObjectMapper().readValue(payload, SimpleClientDetails.class);
-            // TODO update
+            if (StringUtils.isEmpty(temp.getName())) {
+                throw new BadRequestException("name is empty!");
+            } else {
+                temp.setUpdateDate(new Date());
+                if (applicationRepository.update(temp)) {
+                    return temp;
+                } else {
+                    throw new BadRequestException("update failed!");
+                }
+            }
         } catch (Exception e) {
-            throw new BadRequestException();
+            throw new NotAcceptableException();
         }
-        /*
-        if (StringUtils.isEmpty(application.getName()) || StringUtils.isEmpty(application.getAppId())) {
-            throw new BadRequestException();
-        }
-        application.setId(id);
-        application.setUpdateTime(System.currentTimeMillis());
-        try {
-            applicationRepository.save(application);
-        } catch (Exception e) {
-            throw new BadRequestException();
-        }
-        return created();
-        */
-        return "";
     }
 
     @RequestMapping(value = "/api/app/{id}",
             method = RequestMethod.DELETE,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @ResponseBody
-    public void deleteApp(@PathVariable String id) {
+    public String deleteApp(@PathVariable String id) {
         if (!applicationRepository.delete(id)) {
+            throw new InternalServerException();
+        }
+        return deleted();
+    }
+
+    @RequestMapping(value = "/api/app/statistic/{id}",
+            method = RequestMethod.GET,
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public String appStatistic(@PathVariable String id) {
+        SimpleClientDetails client = applicationRepository.findById(id);
+        if (client == null) {
+            throw new NotFoundException();
+        }
+
+        Statistic statistic = new Statistic();
+
+        Statistic.User user = new Statistic.User();
+        user.setCount(clientUserRepository.countAll(client.getClientId()));
+
+        Statistic.Log log = new Statistic.Log();
+        log.setCount(logFileMetaRepository.countAll(client.getClientId()));
+
+        Statistic.Crash crash = new Statistic.Crash();
+        crash.setCount(crashFileMetaRepository.countAll(client.getClientId()));
+
+        statistic.setUser(user);
+        statistic.setLog(log);
+        statistic.setCrash(crash);
+
+        try {
+            return mapper.writeValueAsString(statistic);
+        } catch (JsonProcessingException e) {
             throw new InternalServerException();
         }
     }
@@ -145,7 +186,6 @@ public class AppRestController extends BaseRestController {
         String[] parts = {UUID.randomUUID().toString(),
                 "RANDOM-SPWZPXTGL8LT6OLNMOQU3E4GWS2L7UHR",
                 clientDetails.getName(),
-                clientDetails.getAppId(),
                 String.valueOf(clientDetails.getCreateDate().getTime())};
         return DigestUtils.md5Hex(StringUtils.join(parts, "").getBytes());
     }
@@ -154,9 +194,75 @@ public class AppRestController extends BaseRestController {
         String[] parts = {UUID.randomUUID().toString(),
                 "RANDOM-XBU88X2VQN2JWTS5GBPNHKLAFK5ACPJJ",
                 clientDetails.getName(),
-                clientDetails.getAppId(),
                 String.valueOf(clientDetails.getCreateDate().getTime())};
         return DigestUtils.md5Hex(StringUtils.join(parts, "").getBytes());
+    }
+
+    private static class Statistic {
+
+        private User user;
+        private Log log;
+        private Crash crash;
+
+        public User getUser() {
+            return user;
+        }
+
+        public void setUser(User user) {
+            this.user = user;
+        }
+
+        public Log getLog() {
+            return log;
+        }
+
+        public void setLog(Log log) {
+            this.log = log;
+        }
+
+        public Crash getCrash() {
+            return crash;
+        }
+
+        public void setCrash(Crash crash) {
+            this.crash = crash;
+        }
+
+        private static class User {
+            private long count;
+
+            public long getCount() {
+                return count;
+            }
+
+            public void setCount(long count) {
+                this.count = count;
+            }
+        }
+
+        private static class Log {
+            private long count;
+
+            public long getCount() {
+                return count;
+            }
+
+            public void setCount(long count) {
+                this.count = count;
+            }
+        }
+
+        private static class Crash {
+            private long count;
+
+            public long getCount() {
+                return count;
+            }
+
+            public void setCount(long count) {
+                this.count = count;
+            }
+        }
     }
 
 }

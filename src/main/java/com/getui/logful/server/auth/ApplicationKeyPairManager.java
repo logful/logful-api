@@ -41,6 +41,7 @@ public class ApplicationKeyPairManager {
             try {
                 return RSAUtil.decrypt(data, privateKey);
             } catch (Exception e) {
+                LOG.error("Exception", e);
                 return null;
             }
         } else {

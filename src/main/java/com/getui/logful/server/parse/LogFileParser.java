@@ -3,11 +3,11 @@ package com.getui.logful.server.parse;
 import com.getui.logful.server.util.ByteUtil;
 import com.getui.logful.server.util.CryptoTool;
 import com.getui.logful.server.util.StringUtil;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 
 public class LogFileParser implements ParserInterface {
@@ -27,7 +27,7 @@ public class LogFileParser implements ParserInterface {
     }
 
     @Override
-    public void parse(byte[] security, int version, InputStream inputStream) {
+    public void parse(String appId, boolean compatible, byte[] security, InputStream inputStream) {
         boolean successful = true;
         BufferedInputStream bufferedInputStream = null;
         try {
@@ -109,8 +109,16 @@ public class LogFileParser implements ParserInterface {
                 }
                 short value = ByteUtil.bytesToShort(testMark);
 
-                String tag = CryptoTool.AESDecrypt(security, tagChunk, version);
-                String msg = CryptoTool.AESDecrypt(security, msgChunk, version);
+                String tag;
+                String msg;
+                if (compatible) {
+                    tag = CryptoTool.AESDecrypt(appId, tagChunk);
+                    msg = CryptoTool.AESDecrypt(appId, msgChunk);
+                } else {
+                    tag = CryptoTool.AESDecrypt(security, tagChunk);
+                    msg = CryptoTool.AESDecrypt(security, msgChunk);
+                }
+
                 if (StringUtil.decryptError(tag) || StringUtil.decryptError(msg)) {
                     successful = false;
                     break;
@@ -147,25 +155,11 @@ public class LogFileParser implements ParserInterface {
                     }
                 }
             }
-            bufferedInputStream.close();
-            inputStream.close();
         } catch (Exception e) {
             LOG.error("Exception", e);
         } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    LOG.error("Exception", e);
-                }
-            }
-            if (bufferedInputStream != null) {
-                try {
-                    bufferedInputStream.close();
-                } catch (IOException e) {
-                    LOG.error("Exception", e);
-                }
-            }
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(bufferedInputStream);
         }
         if (listener != null) {
             listener.result(successful);

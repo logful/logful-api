@@ -20,49 +20,38 @@ public class SimpleClientDetails {
     private String id;
 
     private String name;
-
-    private String appId;
-
+    private String description;
+    private String packageName;
+    private String bundleId;
+    private String getuiAppId;
+    private String getuiAppKey;
+    private String getuiMasterSecret;
     private Date createDate;
-
     private Date updateDate;
-
     @Indexed
     private String clientId;
-
     @JsonIgnore
     private Set<String> resourceIds = new HashSet<>();
-
     @JsonIgnore
     private boolean secretRequired;
-
     @Indexed
     private String clientSecret;
-
     @JsonIgnore
     private boolean scoped;
-
     @JsonIgnore
     private Set<String> scope = new HashSet<>();
-
     @JsonIgnore
     private Set<String> authorizedGrantTypes = new HashSet<>();
-
     @JsonIgnore
     private Set<String> registeredRedirectUri = new HashSet<>();
-
     @JsonIgnore
     private Collection<String> authorities = new LinkedHashSet<>();
-
     @JsonIgnore
     private Integer accessTokenValiditySeconds;
-
     @JsonIgnore
     private Integer refreshTokenValiditySeconds;
-
     @JsonIgnore
     private boolean autoApprove;
-
     @JsonIgnore
     private Map<String, Object> additionalInformation = new LinkedHashMap<>();
 
@@ -70,7 +59,6 @@ public class SimpleClientDetails {
         BaseClientDetails temp = new BaseClientDetails();
         this.setAccessTokenValiditySeconds(temp.getAccessTokenValiditySeconds());
         this.setRefreshTokenValiditySeconds(temp.getRefreshTokenValiditySeconds());
-        // TODO resourceIds
     }
 
     public SimpleClientDetails(ClientDetails clientDetails) {
@@ -87,6 +75,54 @@ public class SimpleClientDetails {
         this.secretRequired = clientDetails.isSecretRequired();
     }
 
+    public String getBundleId() {
+        return bundleId;
+    }
+
+    public void setBundleId(String bundleId) {
+        this.bundleId = bundleId;
+    }
+
+    public String getGetuiAppId() {
+        return getuiAppId;
+    }
+
+    public void setGetuiAppId(String getuiAppId) {
+        this.getuiAppId = getuiAppId;
+    }
+
+    public String getGetuiMasterSecret() {
+        return getuiMasterSecret;
+    }
+
+    public void setGetuiMasterSecret(String getuiMasterSecret) {
+        this.getuiMasterSecret = getuiMasterSecret;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getPackageName() {
+        return packageName;
+    }
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+
+    public String getGetuiAppKey() {
+        return getuiAppKey;
+    }
+
+    public void setGetuiAppKey(String getuiAppKey) {
+        this.getuiAppKey = getuiAppKey;
+    }
+
     public Date getCreateDate() {
         return createDate;
     }
@@ -101,14 +137,6 @@ public class SimpleClientDetails {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getAppId() {
-        return appId;
-    }
-
-    public void setAppId(String appId) {
-        this.appId = appId;
     }
 
     public Date getUpdateDate() {

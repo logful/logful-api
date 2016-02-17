@@ -1,19 +1,93 @@
 package com.getui.logful.server.util;
 
+import com.getui.logful.server.Constants;
+import com.getui.logful.server.entity.Certificate;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CryptoTool {
 
     private static final Logger LOG = LoggerFactory.getLogger(CryptoTool.class);
 
-    private static byte[] errorBytes = new byte[]{0x00, 0x00};
+    private static final byte[] errorBytes = new byte[]{0x00, 0x00};
 
-    public static synchronized String AESDecrypt(byte[] security, byte[] data, int version) {
+    private static final String KEY_SUFFIX = "A8P20vWlvfSu3JMO6tBjgr05UvjHAh2x";
+
+    private static Cipher cipher;
+
+    private static ConcurrentHashMap<String, Certificate> keyMap = new ConcurrentHashMap<>();
+
+    private static Cipher cbcCipher;
+
+    @Deprecated
+    public synchronized static String AESDecrypt(String appId, byte[] data) {
+        if (StringUtils.isEmpty(appId) || data == null) {
+            return null;
+        }
+
+        if (ArrayUtils.isEquals(data, errorBytes)) {
+            return null;
+        }
+
+        if (ArrayUtils.isEquals(data, Constants.CRYPTO_ERROR.getBytes())) {
+            return null;
+        }
+
+        try {
+            Certificate certificate = keyMap.get(appId);
+            if (certificate == null) {
+                byte[] key = Base64.encodeBase64((appId + KEY_SUFFIX).getBytes());
+                certificate = security(new String(key), key.length);
+                if (certificate != null) {
+                    keyMap.put(appId, certificate);
+                }
+            }
+
+            if (certificate == null) {
+                return null;
+            }
+
+            String cipherText = new String(Base64.decodeBase64(data), "UTF-8");
+            String[] parts = cipherText.split("__");
+            if (parts.length != 2) {
+                return null;
+            }
+
+            byte[] cipherData = Base64.decodeBase64(parts[1].getBytes());
+
+            if (cbcCipher == null) {
+                cbcCipher = Cipher.getInstance("AES/CBC/PKCS7Padding", "BC");
+            }
+
+            byte[] newKey = Arrays.copyOf(certificate.getKey(), 32);
+
+            SecretKeySpec aesKey = new SecretKeySpec(newKey, "AES");
+            IvParameterSpec iv = new IvParameterSpec(certificate.getIv());
+            cbcCipher.init(Cipher.DECRYPT_MODE, aesKey, iv);
+
+            byte[] out = new byte[cbcCipher.getOutputSize(cipherData.length)];
+            int length = cbcCipher.update(cipherData, 0, cipherData.length, out, 0);
+            length += cbcCipher.doFinal(out, length);
+
+            return new String(out, 0, length, "UTF-8");
+        } catch (Exception e) {
+            LOG.error("Exception", e);
+        }
+
+        return null;
+    }
+
+    public synchronized static String AESDecrypt(byte[] security, byte[] data) {
         if (security == null || data == null) {
             return null;
         }
@@ -22,50 +96,24 @@ public class CryptoTool {
             return null;
         }
 
-        if (version == VersionUtil.CRYPTO_V1) {
-            try {
-                return CryptoTool.decrypt(new String(security), new String(data));
-            } catch (Throwable throwable) {
-                LOG.error("Exception", throwable);
-                return null;
-            }
-        } else if (version == VersionUtil.CRYPTO_V2) {
-            try {
-                byte[] bytes = decryptUpdate(security, data, data.length);
-                return new String(removePadding(bytes));
-            } catch (Throwable throwable) {
-                LOG.error("Exception", throwable);
-                return null;
-            }
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Remove PKCS#7 padding.
-     *
-     * @param in Input byte array
-     * @return Byte array without padding
-     */
-    private static byte[] removePadding(byte[] in) {
-        if (in == null) {
+        if (ArrayUtils.isEquals(data, Constants.CRYPTO_ERROR.getBytes())) {
             return null;
         }
 
-        int len = in.length;
-        int count = in[len - 1] & 0xff;
-        if (count > len) {
-            return null;
-        }
-
-        for (int i = 1; i <= count; i++) {
-            if (in[len - i] != count) {
-                return null;
+        try {
+            if (cipher == null) {
+                cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
             }
+            SecretKeySpec key = new SecretKeySpec(security, "AES");
+            cipher.init(Cipher.DECRYPT_MODE, key);
+            byte[] out = new byte[cipher.getOutputSize(data.length)];
+            int length = cipher.update(data, 0, data.length, out, 0);
+            length += cipher.doFinal(out, length);
+            return new String(out, 0, length, "UTF-8");
+        } catch (Exception e) {
+            LOG.error("Exception", e);
         }
-
-        return Arrays.copyOfRange(in, 0, len - count);
+        return null;
     }
 
     static {
@@ -77,8 +125,5 @@ public class CryptoTool {
         }
     }
 
-    public static native String decrypt(String appId, String msg);
-
-    public static native byte[] decryptUpdate(byte[] key, byte[] data, int length);
-
+    public static native Certificate security(String keyStr, int keyLen);
 }

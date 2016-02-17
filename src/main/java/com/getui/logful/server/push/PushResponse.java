@@ -36,4 +36,7 @@ public class PushResponse {
         this.status = status;
     }
 
+    public boolean ok() {
+        return status == HttpStatus.OK;
+    }
 }

@@ -59,12 +59,6 @@ public class Constants {
 
     public static final String WEED_TEMP_DIR = "weed";
 
-    public static final String DEFAULT_ATTRIBUTE_SEPARATOR = ",";
-
-    public static final String LOG_LINE_SEPARATOR = "\u1699\u168f\u16e5";
-
-    public static final String NEW_LINE_CHARACTER = "\u203c\u204b\u25a9";
-
     /**
      * 加解密失败返回字符串.
      */

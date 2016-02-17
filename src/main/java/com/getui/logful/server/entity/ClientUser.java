@@ -4,6 +4,7 @@ import com.getui.logful.server.util.StringUtil;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.zip.CRC32;
@@ -15,18 +16,41 @@ public class ClientUser {
     private String id;
 
     private int platform;
+
+    @Indexed
     private String clientId;
+
+    @Indexed
     private String uid;
+
+    @Indexed
     private String deviceId;
+
+    @Indexed
     private String alias;
+
+    @Indexed
     private String model;
+
+    @Indexed
     private String imei;
+
+    @Indexed
     private String macAddress;
+
+    @Indexed
     private String osVersion;
+
+    @Indexed
     private String appId;
+
     private int version;
+
+    @Indexed
     private String versionString;
+
     private int level;
+
     private boolean recordOn;
 
     public String getDeviceId() {

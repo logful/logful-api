@@ -1,7 +1,6 @@
 package com.getui.logful.server.rest;
 
-import com.getui.logful.server.LogfulProperties;
-import com.getui.logful.server.util.ControllerUtil;
+import com.getui.logful.server.ServerProperties;
 import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
@@ -25,23 +24,23 @@ public class WeedRestController extends BaseRestController {
     private OkHttpClient client = new OkHttpClient();
 
     @Autowired
-    private LogfulProperties logfulProperties;
+    private ServerProperties serverProperties;
 
     @RequestMapping(value = "/api/weed/dir/status",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String dirStatus() {
-        String url = logfulProperties.weedUrl() + "/dir/status";
+        String url = serverProperties.weedUrl() + "/dir/status";
         return httpGet(url);
     }
 
     @RequestMapping(value = "/api/weed/volume/status",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String volumeStatus(@RequestParam("node") final String node) {
@@ -51,8 +50,8 @@ public class WeedRestController extends BaseRestController {
 
     @RequestMapping(value = "/api/weed/volume/stats/disk",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String volumeDiskStatus(@RequestParam("node") final String node) {
@@ -62,12 +61,12 @@ public class WeedRestController extends BaseRestController {
 
     @RequestMapping(value = "/api/weed/file/{fid}",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_OCTET_STREAM,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public ResponseEntity<InputStreamResource> getFile(@PathVariable String fid) {
-        String url = logfulProperties.weedUrl() + "/" + fid;
+        String url = serverProperties.weedUrl() + "/" + fid;
         Request request = new Request.Builder().url(url).build();
         try {
             Response response = client.newCall(request).execute();

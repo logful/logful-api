@@ -1,8 +1,7 @@
 package com.getui.logful.server.rest;
 
 import com.getui.logful.server.entity.ClientUser;
-import com.getui.logful.server.mongod.MongoClientUserRepository;
-import com.getui.logful.server.util.ControllerUtil;
+import com.getui.logful.server.mongod.ClientUserRepository;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,29 +17,29 @@ import java.util.List;
 public class UserRestController extends BaseRestController {
 
     @Autowired
-    private MongoClientUserRepository mongoClientUserRepository;
+    private ClientUserRepository clientUserRepository;
 
     @RequestMapping(value = "/api/user",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String listUser(final WebRequest request) {
         Query query = queryCondition(request);
-        List<ClientUser> users = mongoClientUserRepository.findAll(query);
-        return listToJson(users);
+        List<ClientUser> users = clientUserRepository.findAll(query);
+        return writeListAsJson(users);
     }
 
     @RequestMapping(value = "/api/user/{uid}",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public String viewUser(@PathVariable String uid) {
         Criteria criteria = Criteria.where("uid").is(uid);
-        List<ClientUser> users = mongoClientUserRepository.findAll(criteria);
+        List<ClientUser> users = clientUserRepository.findAll(criteria);
         if (users != null && users.size() > 0) {
             JSONArray array = new JSONArray();
             for (ClientUser user : users) {
@@ -54,13 +53,6 @@ public class UserRestController extends BaseRestController {
         } else {
             throw new NotFoundException();
         }
-    }
-
-    private Criteria addCriteria(Criteria criteria, String key, String value) {
-        if (!ControllerUtil.isEmpty(value)) {
-            criteria.and(key).is(value);
-        }
-        return criteria;
     }
 
 }

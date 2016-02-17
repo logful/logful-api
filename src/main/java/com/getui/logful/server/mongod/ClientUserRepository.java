@@ -13,12 +13,12 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class MongoClientUserRepository {
+public class ClientUserRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoClientUserRepository(MongoOperations operations) {
+    public ClientUserRepository(MongoOperations operations) {
         this.operations = operations;
     }
 
@@ -36,16 +36,25 @@ public class MongoClientUserRepository {
     }
 
     public void save(ClientUser clientUser) {
-        Criteria criteria = Criteria.where("uid").is(clientUser.getUid());
-        criteria.and("appId").is(clientUser.getAppId());
-        Query query = new Query(criteria);
+        Query query = new Query();
+        query.addCriteria(Criteria.where("uid").is(clientUser.getUid()));
+        query.addCriteria(Criteria.where("appId").is(clientUser.getAppId()));
 
-        ClientUser exist = operations.findOne(query, ClientUser.class);
-        if (exist != null) {
-            // TODO check instance equal
-            clientUser.setId(exist.getId());
-        }
-        operations.save(clientUser);
+        Update update = new Update();
+        update.set("platform", clientUser.getPlatform());
+        update.set("clientId", clientUser.getClientId());
+        update.set("deviceId", clientUser.getDeviceId());
+        update.set("alias", clientUser.getAlias());
+        update.set("model", clientUser.getModel());
+        update.set("imei", clientUser.getImei());
+        update.set("macAddress", clientUser.getMacAddress());
+        update.set("osVersion", clientUser.getOsVersion());
+        update.set("version", clientUser.getVersion());
+        update.set("versionString", clientUser.getVersionString());
+        update.set("level", clientUser.getLevel());
+        update.set("recordOn", clientUser.isRecordOn());
+
+        operations.upsert(query, update, ClientUser.class);
     }
 
     public boolean bindDeviceId(Criteria criteria, String deviceId) {
@@ -89,6 +98,12 @@ public class MongoClientUserRepository {
 
     public List<ClientUser> findAll(Query query) {
         return operations.find(query, ClientUser.class);
+    }
+
+    public Long countAll(String id) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("clientId").is(id));
+        return operations.count(query, ClientUser.class);
     }
 
 }

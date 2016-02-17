@@ -1,15 +1,14 @@
 package com.getui.logful.server.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.ServerProperties;
 import com.getui.logful.server.auth.ApplicationKeyPairManager;
 import com.getui.logful.server.entity.AttachFileMeta;
 import com.getui.logful.server.entity.ClientUser;
 import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.GlobalConfig;
+import com.getui.logful.server.mongod.ClientUserRepository;
 import com.getui.logful.server.mongod.GlobalConfigRepository;
-import com.getui.logful.server.mongod.MongoClientUserRepository;
-import com.getui.logful.server.mongod.MongoControlProfileRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.parse.LogFileParseTask;
 import com.getui.logful.server.parse.LogFileProperties;
@@ -24,7 +23,6 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.bind.annotation.*;
@@ -38,16 +36,13 @@ public class ClientRestController extends BaseRestController {
     private static final Logger LOG = LoggerFactory.getLogger(ClientRestController.class);
 
     @Autowired
-    private LogfulProperties logfulProperties;
+    private ServerProperties serverProperties;
 
     @Autowired
-    private MongoClientUserRepository mongoClientUserRepository;
+    private ClientUserRepository clientUserRepository;
 
     @Autowired
     private GlobalConfigRepository globalConfigRepository;
-
-    @Autowired
-    private MongoControlProfileRepository mongoControlProfileRepository;
 
     @Autowired
     GraylogClientService graylogClientService;
@@ -63,68 +58,37 @@ public class ClientRestController extends BaseRestController {
 
     @RequestMapping(value = "/log/info/upload",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     public String clientUserReport(@RequestBody String payload) {
         JSONObject object = new JSONObject(payload);
         String sdkVersion = object.optString("sdkVersion");
         String signature = object.optString("signature");
         String chunk = object.optString("chunk");
-
-        if (StringUtil.isEmpty(sdkVersion) || StringUtil.isEmpty(signature) || StringUtil.isEmpty(chunk)) {
+        if (StringUtils.isEmpty(sdkVersion) || StringUtils.isEmpty(signature) || StringUtils.isEmpty(chunk)) {
             throw new BadRequestException();
         }
-
-        switch (VersionUtil.version(sdkVersion)) {
-            case V1: {
-                String content = decryptPayload(signature, chunk, VersionUtil.CRYPTO_V2);
-                if (StringUtils.isEmpty(content)) {
-                    throw new BadRequestException();
-                }
-
-                ClientUser clientUser = genClientUser(content);
-                if (clientUser == null) {
-                    throw new BadRequestException();
-                }
-
-                String clientId = applicationKeyPairManager.getClientId();
-                if (!StringUtils.isEmpty(clientId)) {
-                    clientUser.setClientId(clientId);
-                    return v1ClientUserReport(clientUser);
-                } else {
-                    throw new InternalServerException();
-                }
-            }
-            default:
+        int apiVersion = VersionUtil.version(sdkVersion);
+        if (apiVersion == VersionUtil.API_VERSION_V1) {
+            String content = decryptPayload(signature, chunk);
+            if (StringUtils.isEmpty(content)) {
                 throw new BadRequestException();
-        }
-    }
+            }
 
-    /**
-     * Bind push sdk cid.
-     *
-     * @param payload Payload data
-     */
-    @RequestMapping(value = "/log/bind",
-            method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    public void bindDeviceId(@RequestBody String payload) {
-        try {
-            JSONObject object = new JSONObject(payload);
+            ClientUser clientUser = genClientUser(content);
+            if (clientUser == null) {
+                throw new BadRequestException();
+            }
 
-            int platform = object.getInt("platform");
-            String uid = object.getString("uid");
-            String appId = object.getString("appId");
-            String deviceId = object.getString("deviceId");
-
-            Criteria criteria = Criteria.where("platform").is(platform).and("uid").is(uid).and("appId").is(appId);
-            if (!mongoClientUserRepository.bindDeviceId(criteria, deviceId)) {
+            String clientId = applicationKeyPairManager.getClientId();
+            if (!StringUtils.isEmpty(clientId)) {
+                clientUser.setClientId(clientId);
+                return v1ClientUserReport(clientUser);
+            } else {
                 throw new InternalServerException();
             }
-        } catch (Exception e) {
+        } else {
             throw new BadRequestException();
         }
     }
@@ -137,44 +101,40 @@ public class ClientRestController extends BaseRestController {
      */
     @RequestMapping(value = "/log/file/upload",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.ACCEPTED)
     @ResponseBody
-    public void uploadLogFile(@RequestParam("payload") String payload,
-                              @RequestParam("logFile") MultipartFile logFile) {
+    public String uploadLogFile(@RequestParam("payload") String payload,
+                                @RequestParam("logFile") MultipartFile logFile) {
         JSONObject object = new JSONObject(payload);
         String sdkVersion = object.optString("sdkVersion");
         String signature = object.optString("signature");
         String chunk = object.optString("chunk");
-
-        if (StringUtil.isEmpty(sdkVersion) || StringUtil.isEmpty(signature) || StringUtil.isEmpty(chunk)) {
+        if (StringUtils.isEmpty(sdkVersion) || StringUtils.isEmpty(signature) || StringUtils.isEmpty(chunk)) {
             throw new BadRequestException();
         }
-
-        switch (VersionUtil.version(sdkVersion)) {
-            case V1: {
-                byte[] security = applicationKeyPairManager.decrypt(Base64.decodeBase64(signature));
-                if (security == null) {
-                    throw new BadRequestException();
-                }
-
-                String content = decryptPayload(security, chunk, VersionUtil.CRYPTO_V2);
-                if (StringUtils.isEmpty(content)) {
-                    throw new BadRequestException();
-                }
-
-                LogFileProperties properties = genProperties(content, logFile.getOriginalFilename(), security);
-                if (properties == null) {
-                    throw new BadRequestException();
-                }
-
-                properties.setCryptoVersion(VersionUtil.CRYPTO_V2);
-                v1UploadLogFile(properties, logFile);
+        int apiVersion = VersionUtil.version(sdkVersion);
+        if (apiVersion == VersionUtil.API_VERSION_V1) {
+            byte[] security = applicationKeyPairManager.decrypt(Base64.decodeBase64(signature));
+            if (security == null) {
+                throw new BadRequestException();
             }
-            break;
-            default:
-                throw new BadRequestException("Unknown version!");
+
+            String content = decryptPayload(security, chunk);
+            if (StringUtils.isEmpty(content)) {
+                throw new BadRequestException();
+            }
+
+            LogFileProperties properties = genProperties(content, logFile.getOriginalFilename(), security);
+            if (properties == null) {
+                throw new BadRequestException();
+            }
+
+            v1UploadLogFile(properties, logFile);
+            return accepted();
+        } else {
+            throw new BadRequestException("Unknown version!");
         }
     }
 
@@ -186,29 +146,29 @@ public class ClientRestController extends BaseRestController {
      */
     @RequestMapping(value = "/log/crash/upload",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public void uploadCrashReport(@RequestParam("payload") String payload,
-                                  @RequestParam("reportFile") MultipartFile reportFile) {
+    public String uploadCrashReport(@RequestParam("payload") String payload,
+                                    @RequestParam("reportFile") MultipartFile reportFile) {
         JSONObject object = new JSONObject(payload);
         String sdkVersion = object.getString("sdkVersion");
-        switch (VersionUtil.version(sdkVersion)) {
-            case V1:
-                String fileSum = object.getString("fileSum");
-                JSONObject meta = object.getJSONObject("meta");
-                ObjectMapper mapper = new ObjectMapper();
-                try {
-                    CrashFileMeta fileMeta = mapper.readValue(meta.toString(), CrashFileMeta.class);
-                    fileMeta.setClientId(applicationKeyPairManager.getClientId());
-                    v1UploadCrashReport(fileMeta, fileSum, reportFile);
-                } catch (Exception e) {
-                    throw new BadRequestException();
-                }
-                break;
-            default:
-                throw new BadRequestException("Unknown version!");
+        int apiVersion = VersionUtil.version(sdkVersion);
+        if (apiVersion == VersionUtil.API_VERSION_V1) {
+            String fileSum = object.getString("fileSum");
+            JSONObject meta = object.getJSONObject("meta");
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                CrashFileMeta fileMeta = mapper.readValue(meta.toString(), CrashFileMeta.class);
+                fileMeta.setClientId(applicationKeyPairManager.getClientId());
+                v1UploadCrashReport(fileMeta, fileSum, reportFile);
+                return ok();
+            } catch (Exception e) {
+                throw new BadRequestException();
+            }
+        } else {
+            throw new BadRequestException("Unknown version!");
         }
     }
 
@@ -225,72 +185,31 @@ public class ClientRestController extends BaseRestController {
      */
     @RequestMapping(value = "/log/attachment/upload",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public void uploadAttachment(@RequestParam("sdkVersion") String sdkVersion,
-                                 @RequestParam("platform") String platform,
-                                 @RequestParam("uid") String uid,
-                                 @RequestParam("appId") String appId,
-                                 @RequestParam("fileSum") String fileSum,
-                                 @RequestParam("attachmentId") String attachmentId,
-                                 @RequestParam("attachmentFile") MultipartFile attachmentFile) {
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
-        switch (VersionUtil.version(sdkVersion)) {
-            case V1:
-                v1UploadAttachment(StringUtil.platformNumber(platform), uid, appId, fileSum, attachmentId, attachmentFile);
-            default:
-                throw new BadRequestException("Unknown version!");
+    public String uploadAttachment(@RequestParam("sdkVersion") String sdkVersion,
+                                   @RequestParam("platform") String platform,
+                                   @RequestParam("uid") String uid,
+                                   @RequestParam("appId") String appId,
+                                   @RequestParam("fileSum") String fileSum,
+                                   @RequestParam("attachmentId") String attachmentId,
+                                   @RequestParam("attachmentFile") MultipartFile attachmentFile) {
+        int apiVersion = VersionUtil.version(sdkVersion);
+        if (apiVersion == VersionUtil.API_VERSION_V1) {
+            v1UploadAttachment(StringUtil.platformNumber(platform), uid, appId, fileSum, attachmentId, attachmentFile);
+            return ok();
+        } else {
+            throw new BadRequestException("Unknown version!");
         }
     }
 
-    // --------------------------------------------- Old api ------------------------------------------------------ //
-
-    /**
-     * Upload system info file
-     *
-     * @param platform Platform
-     * @param uid      User unique id
-     * @param appId    Application id
-     * @param fileSum  File MD5 sum
-     * @param infoFile System info file
-     * @return Response result
-     */
-    @RequestMapping(value = "/log/uploadSystemInfo",
-            method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    @ResponseBody
-    public String oldUploadSystemInfo(@RequestParam("platform") String platform,
-                                      @RequestParam("uid") String uid,
-                                      @RequestParam("appId") String appId,
-                                      @RequestParam("fileSum") String fileSum,
-                                      @RequestParam("infoFile") MultipartFile infoFile) {
-        return "";
-    }
-
-    /**
-     * Upload log file
-     *
-     * @param platform   Platform
-     * @param uid        User unique id
-     * @param appId      Application id
-     * @param loggerName Logger name
-     * @param layouts    Message layout template
-     * @param level      Log level
-     * @param alias      User alias
-     * @param fileSum    File MD5 sum
-     * @param logFile    Log file
-     */
+    @Deprecated
     @RequestMapping(value = "/log/uploadLogFile",
             method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public void oldUploadLogFile(@RequestParam("platform") String platform,
@@ -302,10 +221,6 @@ public class ClientRestController extends BaseRestController {
                                  @RequestParam("alias") String alias,
                                  @RequestParam("fileSum") String fileSum,
                                  @RequestParam("logFile") MultipartFile logFile) {
-        if (!ControllerUtil.checkPlatform(platform)) {
-            throw new BadRequestException();
-        }
-
         JSONObject object = new JSONObject();
         object.put("platform", StringUtil.platformNumber(platform));
         object.put("uid", uid);
@@ -315,42 +230,20 @@ public class ClientRestController extends BaseRestController {
         object.put("level", level);
         object.put("fileSum", fileSum);
         object.put("alias", alias);
+
         LogFileProperties properties = genProperties(object.toString(), logFile.getOriginalFilename(), appId.getBytes());
         if (properties == null) {
             throw new BadRequestException();
         }
 
-        properties.setCryptoVersion(VersionUtil.CRYPTO_V1);
+        properties.setCompatible(true);
         v1UploadLogFile(properties, logFile);
-    }
-
-    /**
-     * Upload crash report file
-     *
-     * @param platform   Platform
-     * @param uid        User unique id
-     * @param appId      Application id
-     * @param fileSum    File MD5 sum
-     * @param reportFile Crash report file
-     */
-    @RequestMapping(value = "/log/uploadCrashReport",
-            method = RequestMethod.POST,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
-    @ResponseStatus(HttpStatus.OK)
-    @ResponseBody
-    public void oldUploadCrashReport(@RequestParam("platform") String platform,
-                                     @RequestParam("uid") String uid,
-                                     @RequestParam("appId") String appId,
-                                     @RequestParam("fileSum") String fileSum,
-                                     @RequestParam("reportFile") MultipartFile reportFile) {
-        // Nothing
     }
 
     // ---------------------------------- Detail rest controller version function api ------------------------------ //
 
     private String v1ClientUserReport(final ClientUser clientUser) {
-        mongoClientUserRepository.save(clientUser);
+        clientUserRepository.save(clientUser);
         GlobalConfig config = globalConfigRepository.read();
 
         boolean granted = config.getGrantClients().contains(clientUser.getClientId()) &&
@@ -425,11 +318,10 @@ public class ClientRestController extends BaseRestController {
             throw new BadRequestException();
         }
         int queueSize = threadPoolTaskExecutor.getThreadPoolExecutor().getQueue().size();
-        int capacity = ControllerUtil.queueCapacity(logfulProperties.getParser().getQueueCapacity());
+        int capacity = BaseRestController.queueCapacity(serverProperties.getParser().getQueueCapacity());
         if (queueSize < capacity) {
-            String filePath = logfulProperties.tempDir() + "/" + properties.getFilename();
+            String filePath = serverProperties.tempDir() + "/" + properties.getFilename();
             File file = new File(filePath);
-
             try {
                 FileUtil.transferTo(logFile, file);
                 String sum = Checksum.fileMD5(file.getAbsolutePath());
@@ -450,11 +342,11 @@ public class ClientRestController extends BaseRestController {
     private void v1UploadCrashReport(CrashFileMeta fileMeta,
                                      String fileSum,
                                      MultipartFile reportFile) {
-        if (weedFSClientService.writeQueueSize() < logfulProperties.getWeed().getQueueCapacity()) {
+        if (weedFSClientService.writeQueueSize() < serverProperties.getWeed().getQueueCapacity()) {
             String key = StringUtil.randomUid();
             String extension = FilenameUtils.getExtension(reportFile.getOriginalFilename());
             if (StringUtils.isNotEmpty(extension)) {
-                String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
+                String filePath = serverProperties.weedDir() + "/" + key + "." + extension;
                 File file = new File(filePath);
                 try {
                     FileUtil.transferTo(reportFile, file);
@@ -480,11 +372,11 @@ public class ClientRestController extends BaseRestController {
                                     String fileSum,
                                     String attachmentId,
                                     MultipartFile attachmentFile) {
-        if (weedFSClientService.writeQueueSize() < logfulProperties.getWeed().getQueueCapacity()) {
+        if (weedFSClientService.writeQueueSize() < serverProperties.getWeed().getQueueCapacity()) {
             String key = StringUtil.attachmentKey(platform, uid, appId, attachmentId);
             String extension = FilenameUtils.getExtension(attachmentFile.getOriginalFilename());
-            if (!StringUtil.isEmpty(key) && !StringUtil.isEmpty(extension)) {
-                String filePath = logfulProperties.weedDir() + "/" + key + "." + extension;
+            if (!StringUtils.isEmpty(key) && !StringUtils.isEmpty(extension)) {
+                String filePath = serverProperties.weedDir() + "/" + key + "." + extension;
                 File file = new File(filePath);
                 try {
                     FileUtil.transferTo(attachmentFile, file);
@@ -519,7 +411,7 @@ public class ClientRestController extends BaseRestController {
             properties.setSecurity(security);
             properties.setFilename(filename);
             properties.setOriginalFilename(originalFilename);
-            properties.setWorkPath(logfulProperties.getPath());
+            properties.setWorkPath(serverProperties.getPath());
 
             if (StringUtils.isEmpty(properties.getUid()) ||
                     StringUtils.isEmpty(properties.getAppId()) ||
@@ -551,15 +443,15 @@ public class ClientRestController extends BaseRestController {
         return null;
     }
 
-    private String decryptPayload(String signature, String chunk, int version) {
+    private String decryptPayload(String signature, String chunk) {
         byte[] security = applicationKeyPairManager.decrypt(Base64.decodeBase64(signature));
         if (security == null) {
             return null;
         }
-        return decryptPayload(security, chunk, version);
+        return decryptPayload(security, chunk);
     }
 
-    private String decryptPayload(byte[] security, String chunk, int version) {
-        return CryptoTool.AESDecrypt(security, Base64.decodeBase64(chunk), version);
+    private String decryptPayload(byte[] security, String chunk) {
+        return CryptoTool.AESDecrypt(security, Base64.decodeBase64(chunk));
     }
 }

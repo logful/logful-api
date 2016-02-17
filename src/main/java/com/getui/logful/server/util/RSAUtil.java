@@ -56,7 +56,7 @@ public class RSAUtil {
         return encryptCipher.doFinal(data);
     }
 
-    public static byte[] decrypt(byte[] data, PrivateKey key) throws Exception {
+    public synchronized static byte[] decrypt(byte[] data, PrivateKey key) throws Exception {
         if (decryptCipher == null) {
             decryptCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         }

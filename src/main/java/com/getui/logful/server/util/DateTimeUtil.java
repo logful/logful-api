@@ -23,6 +23,10 @@ public class DateTimeUtil {
         return new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(date);
     }
 
+    public static String currentTimeString() {
+        return DateTimeUtil.timeString(System.currentTimeMillis());
+    }
+
     public static Date dayStart(Date date) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);

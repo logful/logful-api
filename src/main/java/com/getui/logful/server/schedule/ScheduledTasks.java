@@ -1,8 +1,8 @@
 package com.getui.logful.server.schedule;
 
-import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.ServerProperties;
 import com.getui.logful.server.entity.LogMessage;
-import com.getui.logful.server.mongod.MongoLogMessageRepository;
+import com.getui.logful.server.mongod.LogMessageRepository;
 import com.getui.logful.server.parse.GraylogClientService;
 import com.getui.logful.server.weed.WeedFSClientService;
 import com.getui.logful.server.weed.WeedFSMeta;
@@ -33,10 +33,10 @@ public class ScheduledTasks {
     private static final long MAX_EXEC_MILLISECOND = 3600000;
 
     @Autowired
-    private LogfulProperties logfulProperties;
+    private ServerProperties serverProperties;
 
     @Autowired
-    private MongoLogMessageRepository mongoLogMessageRepository;
+    private LogMessageRepository logMessageRepository;
 
     @Autowired
     private WeedQueueRepository weedQueueRepository;
@@ -55,7 +55,7 @@ public class ScheduledTasks {
         weedFSClientService.resetServerError();
 
         if (graylogClientService.isConnected()) {
-            List<LogMessage> list = mongoLogMessageRepository.findAllNotSendLimit(PAGE_LIMIT);
+            List<LogMessage> list = logMessageRepository.findAllNotSendLimit(PAGE_LIMIT);
             for (LogMessage logMessage : list) {
                 graylogClientService.send(logMessage);
             }
@@ -72,7 +72,7 @@ public class ScheduledTasks {
     @Scheduled(cron = "0 0 */1 * * *") // every hour
     @Async
     public void clearMemory() {
-        String weedPath = logfulProperties.weedDir();
+        String weedPath = serverProperties.weedDir();
         ConcurrentHashMap<String, WeedFSMeta> map = weedFSClientService.getWeedMetaMap();
         for (Map.Entry<String, WeedFSMeta> entry : map.entrySet()) {
             File file = new File(weedPath + "/" + entry.getKey() + "." + entry.getValue().getExtension());
@@ -89,8 +89,8 @@ public class ScheduledTasks {
         LOG.info("++++++++++ clear system file task start ++++++++++");
         startExecTime.set(System.currentTimeMillis());
 
-        final long ttl = logfulProperties.expires() * 1000;
-        final Path path = Paths.get(logfulProperties.getPath());
+        final long ttl = serverProperties.expires() * 1000;
+        final Path path = Paths.get(serverProperties.getPath());
         try {
             Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                 @Override

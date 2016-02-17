@@ -2,6 +2,7 @@ package com.getui.logful.server.parse;
 
 import com.getui.logful.server.entity.LogMessage;
 import com.getui.logful.server.util.DateTimeUtil;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +16,8 @@ public class LocalFileSender implements SenderInterface {
     private static final Logger LOG = LoggerFactory.getLogger(LocalFileSender.class);
 
     private BufferedWriter writer;
+
+    private StringBuilder builder;
 
     public static LocalFileSender create(final LogFileProperties properties) {
         File weedDir = new File(properties.weedPath());
@@ -34,15 +37,25 @@ public class LocalFileSender implements SenderInterface {
 
     public LocalFileSender(BufferedWriter writer) {
         this.writer = writer;
+        this.builder = new StringBuilder();
     }
 
     @Override
     public void send(LogMessage message) {
         if (writer != null) {
             try {
-                writer.write(DateTimeUtil.timeString(message.getTimestamp()) +
-                        " [" + message.getTag() + "]:" +
-                        " " + message.getMessage());
+                builder.setLength(0);
+                builder.append(DateTimeUtil.timeString(message.getTimestamp()));
+                builder.append(" [");
+                builder.append(message.getTag());
+                builder.append("]: ");
+                builder.append(message.getMessage());
+                if (StringUtils.isNotEmpty(message.getAttachment())) {
+                    builder.append(" attachment<<");
+                    builder.append(message.getAttachment());
+                    builder.append(">>");
+                }
+                writer.write(builder.toString());
                 writer.newLine();
             } catch (IOException e) {
                 LOG.error("Exception", e);

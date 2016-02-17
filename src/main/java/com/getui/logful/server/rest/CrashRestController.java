@@ -2,7 +2,6 @@ package com.getui.logful.server.rest;
 
 import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.mongod.CrashFileMetaRepository;
-import com.getui.logful.server.util.ControllerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.mongodb.core.query.Query;
@@ -24,19 +23,19 @@ public class CrashRestController extends BaseRestController {
 
     @RequestMapping(value = "/api/crash/file",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_JSON,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     public String listCrashFiles(final WebRequest request) {
         Query query = queryCondition(request);
         List<CrashFileMeta> list = crashFileMetaRepository.findAll(query);
-        return listToJson(list);
+        return writeListAsJson(list);
     }
 
     @RequestMapping(value = "/api/crash/file/{id}",
             method = RequestMethod.GET,
-            produces = ControllerUtil.CONTENT_TYPE,
-            headers = ControllerUtil.HEADER)
+            produces = BaseRestController.APPLICATION_OCTET_STREAM,
+            headers = BaseRestController.HEADER)
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<InputStreamResource> readCrashFile(@PathVariable String id) {
         CrashFileMeta meta = crashFileMetaRepository.findById(id);

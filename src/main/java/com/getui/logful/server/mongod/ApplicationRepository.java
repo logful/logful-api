@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -37,6 +38,24 @@ public class ApplicationRepository {
         return writeResult.getN() > 0;
     }
 
+    public boolean update(SimpleClientDetails client) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(client.getId()));
+
+        Update update = new Update();
+        update.set("name", client.getName());
+        update.set("description", client.getDescription());
+        update.set("packageName", client.getPackageName());
+        update.set("bundleId", client.getBundleId());
+        update.set("getuiAppId", client.getGetuiAppId());
+        update.set("getuiAppKey", client.getGetuiAppKey());
+        update.set("getuiMasterSecret", client.getGetuiMasterSecret());
+        update.set("updateDate", client.getUpdateDate());
+
+        WriteResult result = operations.updateFirst(query, update, SimpleClientDetails.class);
+        return result.getN() > 0;
+    }
+
     public List<SimpleClientDetails> findAll(QueryCondition condition) {
         return findAll(condition.getOrder(), condition.getSort(), condition.getOffset(), condition.getLimit());
     }
@@ -47,13 +66,6 @@ public class ApplicationRepository {
             query.with(new Sort(order, sort));
         }
         query.skip(offset).limit(limit);
-        query.fields()
-                .include("name")
-                .include("appId")
-                .include("createDate")
-                .include("updateDate")
-                .include("clientId")
-                .include("clientSecret");
         return operations.find(query, SimpleClientDetails.class);
     }
 

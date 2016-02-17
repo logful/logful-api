@@ -1,9 +1,7 @@
 package com.getui.logful.server.entity;
 
 import com.getui.logful.server.Constants;
-import com.getui.logful.server.util.DateTimeUtil;
 import com.getui.logful.server.util.StringUtil;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -203,17 +201,5 @@ public class LogMessage {
 
     public void setAttachment(String attachment) {
         this.attachment = attachment;
-    }
-
-    public String text() {
-        String temp;
-        if (StringUtil.isEmpty(attachment)) {
-            String[] array = {DateTimeUtil.timeString(timestamp), tag, message};
-            temp = StringUtils.join(array, Constants.LOG_LINE_SEPARATOR);
-        } else {
-            String[] array = {DateTimeUtil.timeString(timestamp), tag, message, attachment};
-            temp = StringUtils.join(array, Constants.LOG_LINE_SEPARATOR);
-        }
-        return temp.replaceAll(System.getProperty("line.separator"), Constants.NEW_LINE_CHARACTER);
     }
 }

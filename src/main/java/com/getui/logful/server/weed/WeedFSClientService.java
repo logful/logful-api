@@ -1,13 +1,13 @@
 package com.getui.logful.server.weed;
 
-import com.getui.logful.server.LogfulProperties;
+import com.getui.logful.server.ServerProperties;
 import com.getui.logful.server.entity.AttachFileMeta;
+import com.getui.logful.server.entity.CrashFileMeta;
 import com.getui.logful.server.entity.LogFileMeta;
 import com.getui.logful.server.mongod.AttachFileMetaRepository;
 import com.getui.logful.server.mongod.CrashFileMetaRepository;
 import com.getui.logful.server.mongod.LogFileMetaRepository;
 import com.getui.logful.server.parse.GraylogClientService;
-import com.getui.logful.server.util.StringUtil;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import io.netty.bootstrap.Bootstrap;
@@ -19,6 +19,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ public class WeedFSClientService implements ChannelFutureListener {
     private final ConcurrentHashMap<String, WeedFSMeta> weedMetaMap = new ConcurrentHashMap<>();
 
     @Autowired
-    private LogfulProperties logfulProperties;
+    private ServerProperties serverProperties;
 
     @Autowired
     private LogFileMetaRepository logFileMetaRepository;
@@ -96,7 +97,7 @@ public class WeedFSClientService implements ChannelFutureListener {
             DBCollection collection;
 
             BasicDBObject index = new BasicDBObject("writeDate", 1);
-            BasicDBObject options = new BasicDBObject("expireAfterSeconds", logfulProperties.expires());
+            BasicDBObject options = new BasicDBObject("expireAfterSeconds", serverProperties.expires());
 
             collection = operations.getCollection(operations.getCollectionName(LogFileMeta.class));
             collection.createIndex(index, options);
@@ -104,12 +105,15 @@ public class WeedFSClientService implements ChannelFutureListener {
             collection = operations.getCollection(operations.getCollectionName(AttachFileMeta.class));
             collection.createIndex(index, options);
 
+            collection = operations.getCollection(operations.getCollectionName(CrashFileMeta.class));
+            collection.createIndex(index, options);
+
             collection = operations.getCollection(operations.getCollectionName(WeedFSMeta.class));
             collection.createIndex(index, options);
         } catch (Exception e) {
             LOG.error("Exception", e);
         }
-        queue = new Queue(logfulProperties);
+        queue = new Queue(serverProperties);
         createBootstrap(workerGroup);
     }
 
@@ -125,9 +129,9 @@ public class WeedFSClientService implements ChannelFutureListener {
     }
 
     public void createBootstrap(EventLoopGroup eventLoopGroup) {
-        String host = logfulProperties.weedMasterHost();
-        int port = logfulProperties.weedMasterPort();
-        if (StringUtil.isEmpty(host)) {
+        String host = serverProperties.weedMasterHost();
+        int port = serverProperties.weedMasterPort();
+        if (StringUtils.isEmpty(host)) {
             throw new IllegalArgumentException("Weed master host can not be null!");
         }
 
@@ -139,18 +143,18 @@ public class WeedFSClientService implements ChannelFutureListener {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup);
         bootstrap.channel(NioSocketChannel.class);
-        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, logfulProperties.getWeed().getConnectTimeout());
+        bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, serverProperties.getWeed().getConnectTimeout());
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         bootstrap.remoteAddress(socketAddress);
 
         URI uri;
         try {
-            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, logfulProperties.getTtl()));
+            uri = new URI(String.format("http://%s:%d/submit?ttl=%s", host, port, serverProperties.getTtl()));
         } catch (URISyntaxException e) {
             throw new RuntimeException("Weed fs submit uri syntax error!");
         }
 
-        String weedDir = logfulProperties.weedDir();
+        String weedDir = serverProperties.weedDir();
         final WeedFSWriteThread writeThread = new WeedFSWriteThread(uri, weedDir, weedQueueRepository, queue.writeQueue);
         final WeedFSReadThread readThread = new WeedFSReadThread(weedDir,
                 logFileMetaRepository,
@@ -231,7 +235,7 @@ public class WeedFSClientService implements ChannelFutureListener {
             public void run() {
                 createBootstrap(eventLoopGroup);
             }
-        }, logfulProperties.getWeed().getReconnectDelay(), TimeUnit.MILLISECONDS);
+        }, serverProperties.getWeed().getReconnectDelay(), TimeUnit.MILLISECONDS);
     }
 
     public void write(WeedFSMeta meta) {
@@ -244,8 +248,7 @@ public class WeedFSClientService implements ChannelFutureListener {
                     LOG.error("Exception", e);
                 }
             } else {
-                // Weed server unexpected error just delete file.
-                File file = new File(logfulProperties.weedDir() + "/" + meta.filename());
+                File file = new File(serverProperties.weedDir() + "/" + meta.filename());
                 FileUtils.deleteQuietly(file);
             }
         } else {
@@ -259,7 +262,7 @@ public class WeedFSClientService implements ChannelFutureListener {
 
         public final BlockingQueue<WeedFSMeta> readQueue;
 
-        public Queue(LogfulProperties properties) {
+        public Queue(ServerProperties properties) {
             this.writeQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
             this.readQueue = new LinkedBlockingQueue<>(properties.getWeed().getQueueCapacity());
         }

@@ -1,6 +1,5 @@
 package com.getui.logful.server.weed;
 
-import com.getui.logful.server.util.StringUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -9,6 +8,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.File;
 import java.net.URI;
@@ -45,22 +45,21 @@ public class WeedFSWriteThread {
 
                 while (running.get()) {
                     lock.lock();
-                    while (channel == null || !channel.isActive()) {
-                        try {
-                            connectedCond.await();
-                        } catch (InterruptedException e) {
-                            if (!running.get()) {
-                                break;
+                    try {
+                        while (channel == null || !channel.isActive()) {
+                            try {
+                                connectedCond.await();
+                            } catch (InterruptedException e) {
+                                if (!running.get()) {
+                                    break;
+                                }
                             }
                         }
-                    }
-
-                    try {
                         if (weedFSMeta == null) {
                             weedFSMeta = queue.poll(100, TimeUnit.MILLISECONDS);
                         }
                         if (weedFSMeta != null && channel != null && channel.isActive()
-                                && uri != null && !StringUtil.isEmpty(dirPath)) {
+                                && uri != null && !StringUtils.isEmpty(dirPath)) {
                             try {
                                 String filePath = dirPath + "/" + weedFSMeta.filename();
                                 File file = new File(filePath);
@@ -87,7 +86,7 @@ public class WeedFSWriteThread {
 
                                     channel.writeAndFlush(request);
                                 } else {
-                                    if (!StringUtil.isEmpty(weedFSMeta.getId())) {
+                                    if (!StringUtils.isEmpty(weedFSMeta.getId())) {
                                         weedFSMeta.setStatus(WeedFSMeta.STATE_DELETED);
                                         queueRepository.save(weedFSMeta);
                                     }
@@ -100,8 +99,9 @@ public class WeedFSWriteThread {
                         }
                     } catch (InterruptedException e) {
                         // Ignore exception.
+                    } finally {
+                        lock.unlock();
                     }
-                    lock.unlock();
                 }
             }
         };

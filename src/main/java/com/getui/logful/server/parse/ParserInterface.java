@@ -4,5 +4,5 @@ import java.io.InputStream;
 
 public interface ParserInterface {
 
-    void parse(byte[] security, int version, InputStream inputStream);
+    void parse(String appId, boolean compatible, byte[] security, InputStream inputStream);
 }

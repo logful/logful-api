@@ -7,21 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		53541ACA1C157A2F003DFC1B /* base64.c in Sources */ = {isa = PBXBuildFile; fileRef = 53541AC51C157A2F003DFC1B /* base64.c */; };
-		53541ACB1C157A2F003DFC1B /* base64.h in Headers */ = {isa = PBXBuildFile; fileRef = 53541AC61C157A2F003DFC1B /* base64.h */; };
 		53541ACC1C157A2F003DFC1B /* interface.c in Sources */ = {isa = PBXBuildFile; fileRef = 53541AC71C157A2F003DFC1B /* interface.c */; };
-		53541ACD1C157A2F003DFC1B /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 53541AC81C157A2F003DFC1B /* util.c */; };
-		53541ACE1C157A2F003DFC1B /* util.h in Headers */ = {isa = PBXBuildFile; fileRef = 53541AC91C157A2F003DFC1B /* util.h */; };
 		53541AD01C157A37003DFC1B /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 53541ACF1C157A37003DFC1B /* libcrypto.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		5309397C1B7DF30E000D335D /* liblogful.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = liblogful.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
-		53541AC51C157A2F003DFC1B /* base64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = base64.c; sourceTree = "<group>"; };
-		53541AC61C157A2F003DFC1B /* base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base64.h; sourceTree = "<group>"; };
 		53541AC71C157A2F003DFC1B /* interface.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = interface.c; sourceTree = "<group>"; };
-		53541AC81C157A2F003DFC1B /* util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = util.c; sourceTree = "<group>"; };
-		53541AC91C157A2F003DFC1B /* util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
 		53541ACF1C157A37003DFC1B /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = lib/libcrypto.a; sourceTree = SOURCE_ROOT; };
 		53541AD21C157A40003DFC1B /* aes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
 		53541AD31C157A40003DFC1B /* asn1.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = asn1.h; sourceTree = "<group>"; };
@@ -218,11 +210,7 @@
 		5393C0291B82DCB700E78858 /* source */ = {
 			isa = PBXGroup;
 			children = (
-				53541AC51C157A2F003DFC1B /* base64.c */,
-				53541AC61C157A2F003DFC1B /* base64.h */,
 				53541AC71C157A2F003DFC1B /* interface.c */,
-				53541AC81C157A2F003DFC1B /* util.c */,
-				53541AC91C157A2F003DFC1B /* util.h */,
 			);
 			name = source;
 			sourceTree = "<group>";
@@ -252,8 +240,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				53541ACE1C157A2F003DFC1B /* util.h in Headers */,
-				53541ACB1C157A2F003DFC1B /* base64.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,9 +299,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				53541ACA1C157A2F003DFC1B /* base64.c in Sources */,
 				53541ACC1C157A2F003DFC1B /* interface.c in Sources */,
-				53541ACD1C157A2F003DFC1B /* util.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

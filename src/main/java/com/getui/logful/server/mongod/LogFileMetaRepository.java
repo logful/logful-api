@@ -37,4 +37,10 @@ public class LogFileMetaRepository {
         return operations.find(query, LogFileMeta.class);
     }
 
+    public Long countAll(String id) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("clientId").is(id));
+        return operations.count(query, LogFileMeta.class);
+    }
+
 }

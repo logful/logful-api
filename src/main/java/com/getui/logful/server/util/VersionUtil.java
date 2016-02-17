@@ -2,17 +2,12 @@ package com.getui.logful.server.util;
 
 public class VersionUtil {
 
-    public static final int CRYPTO_V1 = 0x01;
+    public static final int API_VERSION_V1 = 0x01;
 
-    public static final int CRYPTO_V2 = 0x02;
+    public static final int API_VERSION_V2 = 0x02;
 
-    public enum Version {
-        V1, V2
-    }
-
-    public static Version version(String versionString) {
-        // TODO
-        return Version.V1;
+    public static int version(String versionString) {
+        return API_VERSION_V1;
     }
 
 }

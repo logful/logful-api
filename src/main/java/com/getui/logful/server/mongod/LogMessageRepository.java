@@ -11,12 +11,12 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class MongoLogMessageRepository {
+public class LogMessageRepository {
 
     private final MongoOperations operations;
 
     @Autowired
-    public MongoLogMessageRepository(MongoOperations operations) {
+    public LogMessageRepository(MongoOperations operations) {
         this.operations = operations;
     }
 

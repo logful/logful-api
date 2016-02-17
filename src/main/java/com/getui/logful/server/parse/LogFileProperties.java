@@ -26,14 +26,22 @@ public class LogFileProperties {
     private String fileSum;
     private String workPath;
     private String originalFilename;
-    private int cryptoVersion;
     private String key;
     private String extension;
     private byte[] security;
+    private boolean compatible = false;
 
     public LogFileProperties() {
         this.key = StringUtil.randomUid();
         this.extension = Constants.LOG_FILE_EXTENSION;
+    }
+
+    public boolean isCompatible() {
+        return compatible;
+    }
+
+    public void setCompatible(boolean compatible) {
+        this.compatible = compatible;
     }
 
     public String getClientId() {
@@ -66,14 +74,6 @@ public class LogFileProperties {
 
     public void setFileSum(String fileSum) {
         this.fileSum = fileSum;
-    }
-
-    public int getCryptoVersion() {
-        return cryptoVersion;
-    }
-
-    public void setCryptoVersion(int cryptoVersion) {
-        this.cryptoVersion = cryptoVersion;
     }
 
     public String getExtension() {
